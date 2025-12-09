@@ -4,8 +4,9 @@ import { ChordSearchResult } from "../types";
 // Safety check for process.env or import.meta.env (Vite)
 const getApiKey = () => {
   // Check Vite env (for Vercel deployment)
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
-    return import.meta.env.VITE_API_KEY;
+  // Casting to 'any' prevents TypeScript error TS2339 during build
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
+    return (import.meta as any).env.VITE_API_KEY;
   }
   
   // Fallback for other environments
