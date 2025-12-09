@@ -1,0 +1,7 @@
+{
+  "name": "GS Jam",
+  "description": "A fair, intelligent jam session queue manager for musicians.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
