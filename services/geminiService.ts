@@ -30,29 +30,26 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
   }
 
   try {
-    // STRICT prompt: Whitelist domains only, required snippet.
+    // Using gemini-1.5-flash as it follows tool instructions better than 2.5 for this specific task
     const prompt = `
       Find guitar chords for "${songTitle}" by "${artist}".
       
-      RESTRICTION: You must ONLY return results from these domains:
-      1. ultimate-guitar.com
-      2. tab4u.com
-      3. negina.co.il
-      4. nagnu.co.il
-      5. synctheband.com (Prioritize deep links like /guest/allSongs or specific song IDs)
+      RULES:
+      1. ONLY return links from: ultimate-guitar.com, tab4u.com, negina.co.il, nagnu.co.il, or synctheband.com.
+      2. IGNORE general search results like Wikipedia or Spotify.
+      3. For each result, extract a snippet showing the first line of chords (e.g. "Am G C") or the Key.
+      4. If the result is from 'synctheband.com', the snippet can be "App Link".
       
-      For each result, you MUST extract the first few chords (e.g., "Am C G") or the key (e.g., "Key: G").
-      
-      Output up to 3 results in this exact format:
+      Format EXACTLY as:
       SOURCE_START
-      Title: [Website Name]
-      URL: [Link]
-      Snippet: [Actual chords string or "App Link"]
+      Title: [Page Title]
+      URL: [Full URL]
+      Snippet: [Chord Preview]
       SOURCE_END
     `;
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -63,10 +60,9 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
 
     const parsedResults: ChordSearchResult[] = [];
-    
-    // Parse the structured text response
     const regex = /SOURCE_START\s*Title:\s*(.+?)\s*URL:\s*(.+?)\s*Snippet:\s*(.+?)\s*SOURCE_END/g;
     let match;
+    
     while ((match = regex.exec(text)) !== null) {
       parsedResults.push({
         title: match[1].trim(),
@@ -75,70 +71,78 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
       });
     }
 
-    // --- VALIDATION ---
-    // Only keep results that actually match the whitelist and have a valid link
-    
+    // --- SMART VALIDATION & SWAPPING ---
     const validResults: ChordSearchResult[] = [];
-    const usedChunkUris = new Set<string>();
+    const usedUrls = new Set<string>();
     const allowedDomains = ['ultimate-guitar', 'tab4u', 'negina', 'nagnu', 'synctheband'];
 
-    for (const res of parsedResults) {
-        let validUrl = '';
+    // If the AI didn't return good structured data, fallback to raw grounding chunks
+    const candidates = parsedResults.length > 0 ? parsedResults : groundingChunks.map(c => ({
+        title: c.web?.title || 'Result',
+        url: c.web?.uri || '',
+        snippet: 'Click to view'
+    }));
+
+    for (const res of candidates) {
+        if (!res.url) continue;
+        let finalUrl = '';
         const lowerUrl = res.url.toLowerCase();
-        
-        // Check if URL matches allowed domains
+
+        // 1. Domain Check
         const isAllowed = allowedDomains.some(d => lowerUrl.includes(d));
         if (!isAllowed) continue;
-
-        // Special handling for SyncTheBand: It is an SPA/App-like site.
-        // Google Search Grounding often fails to return deep links for SPAs.
-        // If the URL contains synctheband, we trust the AI's output more leniently.
+        
         const isSyncTheBand = lowerUrl.includes('synctheband');
 
-        // 1. Exact Match in Grounding
+        // 2. Grounding Verification (The "Real Link" Check)
+        // Does this URL exist in the Google Search Metadata?
         const exactMatch = groundingChunks.find(c => c.web?.uri === res.url);
+        
         if (exactMatch && exactMatch.web?.uri) {
-            validUrl = exactMatch.web.uri;
-        } 
-        else {
-            // 2. Fuzzy Match
+            finalUrl = exactMatch.web.uri;
+        } else {
+            // If AI made up a URL, search grounding chunks for a matching DOMAIN
             try {
                 const resDomain = new URL(res.url.startsWith('http') ? res.url : `https://${res.url}`).hostname.replace('www.', '');
-                const domainMatch = groundingChunks.find(c => {
+                
+                const bestSubstitute = groundingChunks.find(c => {
                     if (!c.web?.uri) return false;
-                    const chunkDomain = new URL(c.web.uri).hostname.replace('www.', '');
-                    return chunkDomain.includes(resDomain) || resDomain.includes(chunkDomain);
+                    return c.web.uri.includes(resDomain);
                 });
 
-                if (domainMatch && domainMatch.web?.uri) {
-                    validUrl = domainMatch.web.uri;
+                if (bestSubstitute && bestSubstitute.web?.uri) {
+                    finalUrl = bestSubstitute.web.uri;
+                    // Update title too if possible
+                    res.title = bestSubstitute.web.title || res.title;
+                } else if (isSyncTheBand) {
+                    // SyncTheBand is an app/SPA, deep links might not appear in search metadata.
+                    // We trust the AI constructed link if it looks plausible.
+                    finalUrl = res.url;
                 }
             } catch (e) {
-                // Invalid URL format
+                console.error("URL Parse error", e);
             }
         }
 
-        // 3. Fallback: If AI generated a URL but it wasn't in grounding...
-        // For standard sites, we discard it to prevent broken links.
-        // For SyncTheBand, we KEEP it because it likely exists but isn't indexed deeply.
-        if (!validUrl && isAllowed && res.url.startsWith('http')) {
-            if (isSyncTheBand) {
-               validUrl = res.url; 
-            } else {
-               // For others, try to trust it if it looks very valid (e.g. valid structure)
-               validUrl = res.url;
+        if (finalUrl && !usedUrls.has(finalUrl)) {
+            // 3. Snippet Quality Check
+            // Don't show "Chords available" unless it's the App site
+            if (!isSyncTheBand && res.snippet.length < 20 && (res.snippet.includes("available") || res.snippet.includes("tabs"))) {
+                 // Try to find a better snippet from grounding content if available, otherwise skip
+                 const chunk = groundingChunks.find(c => c.web?.uri === finalUrl);
+                 if (chunk && chunk.web?.title) {
+                     // We can't really get content text from grounding chunks easily in this version, 
+                     // so we just mark it as "View Chords"
+                     res.snippet = "View Chords";
+                 }
             }
-        }
-
-        if (validUrl && !usedChunkUris.has(validUrl)) {
-            // Filter out "Chords available" generic text if possible, prefer actual chords
-            // Exception: SyncTheBand might not have snippets, so we allow it.
-            if (!isSyncTheBand && res.snippet.toLowerCase().includes("chords available") && res.snippet.length < 20) {
-               // Skip generic snippets for standard sites if possible
-            } else {
-               usedChunkUris.add(validUrl);
-               validResults.push({ ...res, url: validUrl });
-            }
+            
+            usedUrls.add(finalUrl);
+            validResults.push({
+                title: res.title,
+                url: finalUrl,
+                snippet: res.snippet
+            });
         }
     }
 

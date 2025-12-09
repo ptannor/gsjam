@@ -1,3 +1,4 @@
+
 import { SongChoice, JamParticipant } from "../types";
 
 /**
@@ -19,8 +20,13 @@ export const rebalanceQueue = (
   const songMap = new Map(activeSongs.map(s => [s.id, s]));
 
   // FIX: Sort participants by arrivalTime to ensure rank is based on TIME, not array order.
-  // This fixes the issue where adding a proxy user (who is appended to array) calculated the wrong rank.
-  const sortedParticipants = [...participants].sort((a, b) => a.arrivalTime - b.arrivalTime);
+  // Added Tie-Breaker: If arrival time is identical, sort by ID to ensure deterministic order.
+  const sortedParticipants = [...participants].sort((a, b) => {
+    const timeDiff = a.arrivalTime - b.arrivalTime;
+    if (timeDiff !== 0) return timeDiff;
+    return a.id.localeCompare(b.id);
+  });
+
   const participantArrivalMap = new Map(sortedParticipants.map((p, index) => [p.userId, index])); // 0 is first
 
   // 2. Identify Stolen Songs and their preferred indices based on currentOrderIds
@@ -77,15 +83,7 @@ export const rebalanceQueue = (
   // Re-assemble
   // We iterate through slots. If a slot is reserved for a stolen song, use it.
   // Otherwise, pop the next fair song.
-  // NOTE: This assumes the list size is constant or growing. 
-  // If dragged to index 5, but we only have 3 songs total now, index 5 is invalid.
-  // So we compress the stolen indices relative to the active count.
   
-  // Simpler approach for React DnD stability:
-  // 1. Create a list of "slots" based on current active songs count.
-  // 2. Place stolen songs in their relative positions if possible.
-  // 3. Fill gaps with fair songs.
-
   const totalSlots = activeSongs.length;
   const resultSlots: (string | null)[] = new Array(totalSlots).fill(null);
 

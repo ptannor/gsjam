@@ -368,7 +368,8 @@ export default function App() {
   const handleJoinSelection = (userName: UserName) => {
     setJoiningUser(userName);
     const now = new Date();
-    setManualArrivalTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    // Default to HH:MM:SS for precision
+    setManualArrivalTime(now.toLocaleTimeString('en-GB', { hour12: false }));
   };
 
   const confirmJoin = (timeMode: 'now' | 'manual') => {
@@ -408,7 +409,7 @@ export default function App() {
   const handleAddProxyParticipant = () => {
     setProxyUserToAdd('');
     const now = new Date();
-    setProxyArrivalTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    setProxyArrivalTime(now.toLocaleTimeString('en-GB', { hour12: false }));
     setShowAddParticipantModal(true);
   };
 
@@ -714,7 +715,7 @@ export default function App() {
                 </div>
                 <div className="bg-jam-900 p-5 rounded-xl border border-jam-700">
                   <label className="block text-sm text-jam-300 mb-3 font-medium">Arrival Time:</label>
-                  <input type="time" value={manualArrivalTime} onChange={(e) => setManualArrivalTime(e.target.value)} className="w-full bg-jam-800 border border-jam-600 rounded-lg p-3 text-white text-xl text-center focus:border-orange-500 outline-none" />
+                  <input type="time" step="1" value={manualArrivalTime} onChange={(e) => setManualArrivalTime(e.target.value)} className="w-full bg-jam-800 border border-jam-600 rounded-lg p-3 text-white text-xl text-center focus:border-orange-500 outline-none" />
                   <Button variant="secondary" className="w-full mt-4" onClick={() => confirmJoin('manual')}>Confirm Time</Button>
                 </div>
              </div>
@@ -1216,7 +1217,8 @@ export default function App() {
              <div>
                 <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">When?</label>
                 <input 
-                  type="time" 
+                  type="time"
+                  step="1"
                   value={proxyArrivalTime} 
                   onChange={(e) => setProxyArrivalTime(e.target.value)} 
                   className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
