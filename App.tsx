@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DndContext, 
@@ -20,7 +21,8 @@ import {
   Plus, Music, Clock, Users, BarChart2, GripVertical, 
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
-  Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye
+  Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
+  Zap
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -1057,7 +1059,7 @@ export default function App() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <Trophy className="text-yellow-400" size={20} /> Crowd Favorites
+                                    <Trophy className="text-green-400" size={20} /> Crowd Favorites
                                 </h3>
                                 <div className="space-y-5">
                                     {leaderboard.slice(0, 5).map((item, idx) => (
@@ -1076,7 +1078,7 @@ export default function App() {
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Donut Chart */}
+                                                {/* Donut Chart - Updated Colors for Highlight(Green) and Sababa(Yellow) */}
                                                 <div className="relative w-12 h-12 rounded-full flex items-center justify-center bg-jam-800"
                                                     style={{
                                                         background: `conic-gradient(
@@ -1222,6 +1224,113 @@ export default function App() {
                       )}
                   </div>
               )}
+
+              {/* Leaderboards Tab */}
+              {statsTab === 'leaderboards' && (
+                  <div className="space-y-6 animate-fade-in">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           {/* Crowd Pleasers Card */}
+                           <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                               <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                   <Zap className="text-orange-400" size={20} /> Crowd Pleasers
+                               </h3>
+                               <p className="text-xs text-jam-400 mb-4">Who picks the best songs on average?</p>
+                               <div className="space-y-4">
+                                   {crowdPleasers.slice(0, 5).map((cp, idx) => {
+                                       const user = participants.find(p => p.userId === cp.userId) || ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === cp.userId);
+                                       const name = typeof user === 'string' ? user : user?.name || cp.userId;
+                                       return (
+                                           <div key={cp.userId} className="flex items-center justify-between p-3 rounded-xl bg-jam-900/50">
+                                               <div className="flex items-center gap-3">
+                                                   <span className="font-bold text-jam-500 w-4">#{idx + 1}</span>
+                                                   <span className="font-bold text-white">{name}</span>
+                                               </div>
+                                               <div className="text-right">
+                                                   <div className="text-sm font-bold text-orange-400">{cp.avgScore} pts</div>
+                                                   <div className="text-[10px] text-jam-500">{cp.songCount} songs</div>
+                                               </div>
+                                           </div>
+                                       );
+                                   })}
+                               </div>
+                           </div>
+
+                           {/* Top Songs All Time */}
+                           <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                               <div className="flex items-center justify-between mb-6">
+                                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                       <Star className="text-yellow-400" size={20} /> Top Songs
+                                   </h3>
+                                   <select 
+                                      className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                                      value={leaderboardPerspective}
+                                      onChange={(e) => setLeaderboardPerspective(e.target.value)}
+                                   >
+                                      <option value="all">Everyone's Vote</option>
+                                      {ALL_USERS.map(u => (
+                                          <option key={u} value={u.toLowerCase().replace(' ','_')}>{u}'s Vote</option>
+                                      ))}
+                                   </select>
+                               </div>
+                               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+                                   {leaderboard.map((item, idx) => (
+                                       <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 flex items-center gap-3">
+                                           <div className={`font-bold text-lg w-6 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-600'}`}>#{idx + 1}</div>
+                                           <div className="flex-1 min-w-0">
+                                               <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
+                                               <div className="text-xs text-jam-400 truncate">{item.song.artist}</div>
+                                           </div>
+                                           <div className="font-mono font-bold text-green-400">{item.score}</div>
+                                       </div>
+                                   ))}
+                               </div>
+                           </div>
+                      </div>
+                  </div>
+              )}
+
+              {/* Taste Buds Tab */}
+              {statsTab === 'taste' && (
+                  <div className="space-y-6 animate-fade-in">
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                               <Heart className="text-red-400" size={20} /> Musical Soulmates
+                           </h3>
+                           <p className="text-sm text-jam-400 mb-6">Based on how similarly you rate the same songs.</p>
+                           
+                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                               {tasteSimilarity.map((pair, idx) => {
+                                   const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
+                                   const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
+                                   
+                                   return (
+                                       <div key={idx} className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 relative overflow-hidden group">
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <div className="font-bold text-white text-sm">{userA}</div>
+                                                <div className="text-xs font-bold text-jam-500">&</div>
+                                                <div className="font-bold text-white text-sm">{userB}</div>
+                                            </div>
+                                            <div className="mt-3 flex items-end justify-between relative z-10">
+                                                <div className="text-3xl font-bold text-orange-500">{pair.score}%</div>
+                                                <div className="text-[10px] text-jam-400">{pair.commonSongs} songs together</div>
+                                            </div>
+                                            {/* Bar Background */}
+                                            <div className="absolute bottom-0 left-0 h-1 bg-orange-500/20 w-full">
+                                                <div className="h-full bg-orange-500" style={{width: `${pair.score}%`}}></div>
+                                            </div>
+                                       </div>
+                                   );
+                               })}
+                               {tasteSimilarity.length === 0 && (
+                                   <div className="col-span-full text-center py-12 text-jam-500 italic">
+                                       Not enough shared ratings yet to verify soulmates. Start jamming!
+                                   </div>
+                               )}
+                           </div>
+                       </div>
+                  </div>
+              )}
+
            </div>
         )}
       </main>

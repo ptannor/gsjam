@@ -1,3 +1,4 @@
+
 import { UserName } from './types';
 
 export const ALL_USERS: UserName[] = [
@@ -9,8 +10,8 @@ export const ALL_USERS: UserName[] = [
 ];
 
 export const RATING_OPTIONS = [
-  { value: 'Highlight', label: '🌟 Highlight', color: 'text-yellow-400' },
-  { value: 'Sababa', label: '👍 Sababa', color: 'text-green-400' },
+  { value: 'Highlight', label: '🌟 Highlight', color: 'text-green-400' },
+  { value: 'Sababa', label: '👍 Sababa', color: 'text-yellow-400' },
   { value: 'No comment', label: '😐 No comment', color: 'text-gray-400' },
   { value: 'Needs work', label: '🔧 Needs work', color: 'text-red-400' },
 ] as const;

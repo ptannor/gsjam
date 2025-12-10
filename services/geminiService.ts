@@ -29,32 +29,34 @@ const isValidResultForDomain = (url: string, targetDomain: string): boolean => {
     
     // Domain Check
     let domainMatch = false;
-    if (targetDomain === 'Ultimate Guitar') domainMatch = lower.includes('ultimate-guitar.com');
-    else if (targetDomain === 'Tab4u') domainMatch = lower.includes('tab4u.com');
-    else if (targetDomain === 'Negina/Nagnu') domainMatch = lower.includes('negina.co.il') || lower.includes('nagnu.co.il');
-    else if (targetDomain === 'SyncTheBand') domainMatch = lower.includes('synctheband.com');
-    else domainMatch = true; // Fallback for catch-all
+    if (targetDomain === 'International') {
+        domainMatch = lower.includes('ultimate-guitar.com');
+    }
+    else if (targetDomain === 'Israeli') {
+        domainMatch = lower.includes('tab4u.com') || lower.includes('negina.co.il') || lower.includes('nagnu.co.il');
+    }
+    else {
+        domainMatch = true; 
+    }
 
     if (!domainMatch) return false;
 
     // Content Check (Filter out junk)
-    if (lower.includes('login') || lower.includes('signup') || lower.includes('account') || lower.includes('reset')) {
+    if (lower.includes('login') || lower.includes('signup') || lower.includes('account') || lower.includes('reset') || lower.includes('search')) {
         return false;
     }
 
     return true;
 };
 
-const performSingleDomainSearch = async (
+const performBatchSearch = async (
     songTitle: string, 
     artist: string, 
-    siteQuery: string, 
-    domainName: string
+    query: string, 
+    batchName: string
 ): Promise<ChordSearchResult[]> => {
     try {
-        // Query construction
-        // We pass the raw query directly to force the tool to function correctly
-        const prompt = `Find the specific guitar chords page for "${songTitle}" by "${artist}". Query: ${siteQuery}`;
+        const prompt = `Find specific guitar chords for "${songTitle}" by "${artist}". Query: ${query}`;
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -74,32 +76,29 @@ const performSingleDomainSearch = async (
         for (const chunk of chunks) {
             if (chunk.web?.uri && chunk.web?.title) {
                 const url = chunk.web.uri;
-                if (isValidResultForDomain(url, domainName) && !seenUrls.has(url)) {
+                if (isValidResultForDomain(url, batchName) && !seenUrls.has(url)) {
                     foundResults.push({
                         title: chunk.web.title,
                         url: url,
-                        snippet: domainName // Clean source name
+                        snippet: getDomainFromUrl(url) // Clean source name
                     });
                     seenUrls.add(url);
                 }
             }
         }
 
-        // 2. Extract from Text (Fallback for when Metadata is empty)
-        // Regex to find http/https links OR Markdown links [Text](url)
+        // 2. Extract from Text (Fallback)
         const urlRegex = /(https?:\/\/[^\s)\]]+)/g;
         const textMatches = textOutput.match(urlRegex);
 
         if (textMatches) {
             for (const url of textMatches) {
-                // Clean trailing punctuation
                 let cleanUrl = url.replace(/[.,;)]$/, '');
-                
-                if (isValidResultForDomain(cleanUrl, domainName) && !seenUrls.has(cleanUrl)) {
+                if (isValidResultForDomain(cleanUrl, batchName) && !seenUrls.has(cleanUrl)) {
                     foundResults.push({
-                        title: `${songTitle} - ${domainName}`, // Generic title for text matches
+                        title: `${songTitle} - ${getDomainFromUrl(cleanUrl)}`,
                         url: cleanUrl,
-                        snippet: domainName
+                        snippet: getDomainFromUrl(cleanUrl)
                     });
                     seenUrls.add(cleanUrl);
                 }
@@ -108,7 +107,7 @@ const performSingleDomainSearch = async (
 
         return foundResults;
     } catch (e) {
-        console.warn(`Search failed for ${domainName}`, e);
+        console.warn(`Search failed for ${batchName}`, e);
         return [];
     }
 };
@@ -119,43 +118,39 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
     return [];
   }
 
-  // Execute distinct searches in parallel
+  // OPTIMIZATION: 2 Batches for the "Big 4" Sites
+  // Batch 1: Ultimate Guitar
+  // Batch 2: Israeli Sites (Tab4u, Negina, Nagnu)
+  
   const searchPromises = [
-      // 1. Ultimate Guitar
-      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" site:ultimate-guitar.com chords`, "Ultimate Guitar"),
-      
-      // 2. Tab4u (Hebrew added for better hit rate)
-      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" site:tab4u.com אקורדים`, "Tab4u"),
-      
-      // 3. Negina/Nagnu (Hebrew)
-      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" (site:negina.co.il OR site:nagnu.co.il) אקורדים`, "Negina/Nagnu"),
-      
-      // 4. SyncTheBand
-      performSingleDomainSearch(songTitle, artist, `"${songTitle}" site:synctheband.com`, "SyncTheBand"),
-
-      // 5. Catch-All Broad Search (To ensure we get *something* if the specific ones fail)
-      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" guitar chords tabs`, "Other Sources")
+      performBatchSearch(
+          songTitle, 
+          artist, 
+          `"${songTitle}" "${artist}" chords site:ultimate-guitar.com`, 
+          "International"
+      ),
+      performBatchSearch(
+          songTitle, 
+          artist, 
+          `"${songTitle}" "${artist}" אקורדים (site:tab4u.com OR site:negina.co.il OR site:nagnu.co.il)`, 
+          "Israeli"
+      )
   ];
 
   const resultsArrays = await Promise.all(searchPromises);
-  
-  // Flatten
   const flatResults = resultsArrays.flat();
 
   // Deduplicate and Sort
-  // FIX: Rank by URL content, not by which search found it. 
-  // This ensures that if "Other Sources" finds a Tab4u link, it still goes to the top.
   const uniqueUrls = new Set<string>();
   const allResults: ChordSearchResult[] = [];
 
-  // Sort Logic: High priority for specific domains
+  // Sort Logic: Priority Order
   flatResults.sort((a, b) => {
       const getScore = (r: ChordSearchResult) => {
           const u = r.url.toLowerCase();
           if (u.includes('tab4u.com')) return 10;
           if (u.includes('negina.co.il') || u.includes('nagnu.co.il')) return 9;
           if (u.includes('ultimate-guitar.com')) return 8;
-          if (u.includes('synctheband.com')) return 7;
           return 1;
       };
       return getScore(b) - getScore(a);
@@ -163,29 +158,24 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
 
   for (const res of flatResults) {
       if (!uniqueUrls.has(res.url)) {
-          // Fix snippet display if it came from "Other Sources" but is actually a preferred site
+          // Improve snippet display
           const u = res.url.toLowerCase();
-          if (res.snippet === 'Other Sources') {
-             if (u.includes('tab4u')) res.snippet = 'Tab4u';
-             else if (u.includes('ultimate-guitar')) res.snippet = 'Ultimate Guitar';
-             else if (u.includes('negina') || u.includes('nagnu')) res.snippet = 'Negina/Nagnu';
-             else if (u.includes('synctheband')) res.snippet = 'SyncTheBand';
-             else res.snippet = getDomainFromUrl(res.url); // Extract real domain
-          }
+          if (u.includes('tab4u')) res.snippet = 'Tab4u';
+          else if (u.includes('ultimate-guitar')) res.snippet = 'Ultimate Guitar';
+          else if (u.includes('negina') || u.includes('nagnu')) res.snippet = 'Negina/Nagnu';
+          else res.snippet = getDomainFromUrl(res.url);
 
           allResults.push(res);
           uniqueUrls.add(res.url);
       }
   }
 
-  // Limit to reasonable amount but ensure diversity
-  return allResults.slice(0, 15);
+  return allResults.slice(0, 10);
 };
 
-// Helper for clean display
 function getDomainFromUrl(url: string) {
     try {
-        return new URL(url).hostname.replace('www.', '');
+        return new URL(url).hostname.replace('www.', '').replace('tabs.', '');
     } catch {
         return 'Web Result';
     }
