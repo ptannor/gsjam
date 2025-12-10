@@ -1,11 +1,11 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { ChordSearchResult } from "../types";
 
 // Safety check for process.env or import.meta.env (Vite)
 const getApiKey = () => {
   // Check Vite env (for Vercel deployment)
-  // Casting to 'any' prevents TypeScript error TS2339 during build
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
+  if (typeof (import.meta as any) !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
     return (import.meta as any).env.VITE_API_KEY;
   }
   
@@ -23,133 +23,170 @@ const getApiKey = () => {
 const API_KEY = getApiKey();
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
+// Check if a URL belongs to the target domain AND is likely a content page (not homepage/login)
+const isValidResultForDomain = (url: string, targetDomain: string): boolean => {
+    const lower = url.toLowerCase();
+    
+    // Domain Check
+    let domainMatch = false;
+    if (targetDomain === 'Ultimate Guitar') domainMatch = lower.includes('ultimate-guitar.com');
+    else if (targetDomain === 'Tab4u') domainMatch = lower.includes('tab4u.com');
+    else if (targetDomain === 'Negina/Nagnu') domainMatch = lower.includes('negina.co.il') || lower.includes('nagnu.co.il');
+    else if (targetDomain === 'SyncTheBand') domainMatch = lower.includes('synctheband.com');
+    else domainMatch = true; // Fallback for catch-all
+
+    if (!domainMatch) return false;
+
+    // Content Check (Filter out junk)
+    if (lower.includes('login') || lower.includes('signup') || lower.includes('account') || lower.includes('reset')) {
+        return false;
+    }
+
+    return true;
+};
+
+const performSingleDomainSearch = async (
+    songTitle: string, 
+    artist: string, 
+    siteQuery: string, 
+    domainName: string
+): Promise<ChordSearchResult[]> => {
+    try {
+        // Query construction
+        // We pass the raw query directly to force the tool to function correctly
+        const prompt = `Find the specific guitar chords page for "${songTitle}" by "${artist}". Query: ${siteQuery}`;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                tools: [{ googleSearch: {} }],
+            },
+        });
+
+        const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+        const textOutput = response.text || "";
+        
+        const foundResults: ChordSearchResult[] = [];
+        const seenUrls = new Set<string>();
+
+        // 1. Extract from Grounding Metadata (Verified Links)
+        for (const chunk of chunks) {
+            if (chunk.web?.uri && chunk.web?.title) {
+                const url = chunk.web.uri;
+                if (isValidResultForDomain(url, domainName) && !seenUrls.has(url)) {
+                    foundResults.push({
+                        title: chunk.web.title,
+                        url: url,
+                        snippet: domainName // Clean source name
+                    });
+                    seenUrls.add(url);
+                }
+            }
+        }
+
+        // 2. Extract from Text (Fallback for when Metadata is empty)
+        // Regex to find http/https links OR Markdown links [Text](url)
+        const urlRegex = /(https?:\/\/[^\s)\]]+)/g;
+        const textMatches = textOutput.match(urlRegex);
+
+        if (textMatches) {
+            for (const url of textMatches) {
+                // Clean trailing punctuation
+                let cleanUrl = url.replace(/[.,;)]$/, '');
+                
+                if (isValidResultForDomain(cleanUrl, domainName) && !seenUrls.has(cleanUrl)) {
+                    foundResults.push({
+                        title: `${songTitle} - ${domainName}`, // Generic title for text matches
+                        url: cleanUrl,
+                        snippet: domainName
+                    });
+                    seenUrls.add(cleanUrl);
+                }
+            }
+        }
+
+        return foundResults;
+    } catch (e) {
+        console.warn(`Search failed for ${domainName}`, e);
+        return [];
+    }
+};
+
 export const searchChords = async (songTitle: string, artist: string): Promise<ChordSearchResult[]> => {
   if (!API_KEY) {
     console.warn("No API Key provided for chord search.");
     return [];
   }
 
-  try {
-    // Using gemini-1.5-flash as it follows tool instructions better than 2.5 for this specific task
-    const prompt = `
-      Find guitar chords for "${songTitle}" by "${artist}".
+  // Execute distinct searches in parallel
+  const searchPromises = [
+      // 1. Ultimate Guitar
+      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" site:ultimate-guitar.com chords`, "Ultimate Guitar"),
       
-      RULES:
-      1. ONLY return links from: ultimate-guitar.com, tab4u.com, negina.co.il, nagnu.co.il, or synctheband.com.
-      2. IGNORE general search results like Wikipedia or Spotify.
-      3. For each result, extract a snippet showing the first line of chords (e.g. "Am G C") or the Key.
-      4. If the result is from 'synctheband.com', the snippet can be "App Link".
+      // 2. Tab4u (Hebrew added for better hit rate)
+      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" site:tab4u.com אקורדים`, "Tab4u"),
       
-      Format EXACTLY as:
-      SOURCE_START
-      Title: [Page Title]
-      URL: [Full URL]
-      Snippet: [Chord Preview]
-      SOURCE_END
-    `;
-    
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
-    });
+      // 3. Negina/Nagnu (Hebrew)
+      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" (site:negina.co.il OR site:nagnu.co.il) אקורדים`, "Negina/Nagnu"),
+      
+      // 4. SyncTheBand
+      performSingleDomainSearch(songTitle, artist, `"${songTitle}" site:synctheband.com`, "SyncTheBand"),
 
-    const text = response.text || '';
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      // 5. Catch-All Broad Search (To ensure we get *something* if the specific ones fail)
+      performSingleDomainSearch(songTitle, artist, `"${songTitle}" "${artist}" guitar chords tabs`, "Other Sources")
+  ];
 
-    const parsedResults: ChordSearchResult[] = [];
-    const regex = /SOURCE_START\s*Title:\s*(.+?)\s*URL:\s*(.+?)\s*Snippet:\s*(.+?)\s*SOURCE_END/g;
-    let match;
-    
-    while ((match = regex.exec(text)) !== null) {
-      parsedResults.push({
-        title: match[1].trim(),
-        url: match[2].trim(),
-        snippet: match[3].trim()
-      });
-    }
+  const resultsArrays = await Promise.all(searchPromises);
+  
+  // Flatten
+  const flatResults = resultsArrays.flat();
 
-    // --- SMART VALIDATION & SWAPPING ---
-    const validResults: ChordSearchResult[] = [];
-    const usedUrls = new Set<string>();
-    const allowedDomains = ['ultimate-guitar', 'tab4u', 'negina', 'nagnu', 'synctheband'];
+  // Deduplicate and Sort
+  // FIX: Rank by URL content, not by which search found it. 
+  // This ensures that if "Other Sources" finds a Tab4u link, it still goes to the top.
+  const uniqueUrls = new Set<string>();
+  const allResults: ChordSearchResult[] = [];
 
-    // If the AI didn't return good structured data, fallback to raw grounding chunks
-    const candidates = parsedResults.length > 0 ? parsedResults : groundingChunks.map(c => ({
-        title: c.web?.title || 'Result',
-        url: c.web?.uri || '',
-        snippet: 'Click to view'
-    }));
+  // Sort Logic: High priority for specific domains
+  flatResults.sort((a, b) => {
+      const getScore = (r: ChordSearchResult) => {
+          const u = r.url.toLowerCase();
+          if (u.includes('tab4u.com')) return 10;
+          if (u.includes('negina.co.il') || u.includes('nagnu.co.il')) return 9;
+          if (u.includes('ultimate-guitar.com')) return 8;
+          if (u.includes('synctheband.com')) return 7;
+          return 1;
+      };
+      return getScore(b) - getScore(a);
+  });
 
-    for (const res of candidates) {
-        if (!res.url) continue;
-        let finalUrl = '';
-        const lowerUrl = res.url.toLowerCase();
+  for (const res of flatResults) {
+      if (!uniqueUrls.has(res.url)) {
+          // Fix snippet display if it came from "Other Sources" but is actually a preferred site
+          const u = res.url.toLowerCase();
+          if (res.snippet === 'Other Sources') {
+             if (u.includes('tab4u')) res.snippet = 'Tab4u';
+             else if (u.includes('ultimate-guitar')) res.snippet = 'Ultimate Guitar';
+             else if (u.includes('negina') || u.includes('nagnu')) res.snippet = 'Negina/Nagnu';
+             else if (u.includes('synctheband')) res.snippet = 'SyncTheBand';
+             else res.snippet = getDomainFromUrl(res.url); // Extract real domain
+          }
 
-        // 1. Domain Check
-        const isAllowed = allowedDomains.some(d => lowerUrl.includes(d));
-        if (!isAllowed) continue;
-        
-        const isSyncTheBand = lowerUrl.includes('synctheband');
-
-        // 2. Grounding Verification (The "Real Link" Check)
-        // Does this URL exist in the Google Search Metadata?
-        const exactMatch = groundingChunks.find(c => c.web?.uri === res.url);
-        
-        if (exactMatch && exactMatch.web?.uri) {
-            finalUrl = exactMatch.web.uri;
-        } else {
-            // If AI made up a URL, search grounding chunks for a matching DOMAIN
-            try {
-                const resDomain = new URL(res.url.startsWith('http') ? res.url : `https://${res.url}`).hostname.replace('www.', '');
-                
-                const bestSubstitute = groundingChunks.find(c => {
-                    if (!c.web?.uri) return false;
-                    return c.web.uri.includes(resDomain);
-                });
-
-                if (bestSubstitute && bestSubstitute.web?.uri) {
-                    finalUrl = bestSubstitute.web.uri;
-                    // Update title too if possible
-                    res.title = bestSubstitute.web.title || res.title;
-                } else if (isSyncTheBand) {
-                    // SyncTheBand is an app/SPA, deep links might not appear in search metadata.
-                    // We trust the AI constructed link if it looks plausible.
-                    finalUrl = res.url;
-                }
-            } catch (e) {
-                console.error("URL Parse error", e);
-            }
-        }
-
-        if (finalUrl && !usedUrls.has(finalUrl)) {
-            // 3. Snippet Quality Check
-            // Don't show "Chords available" unless it's the App site
-            if (!isSyncTheBand && res.snippet.length < 20 && (res.snippet.includes("available") || res.snippet.includes("tabs"))) {
-                 // Try to find a better snippet from grounding content if available, otherwise skip
-                 const chunk = groundingChunks.find(c => c.web?.uri === finalUrl);
-                 if (chunk && chunk.web?.title) {
-                     // We can't really get content text from grounding chunks easily in this version, 
-                     // so we just mark it as "View Chords"
-                     res.snippet = "View Chords";
-                 }
-            }
-            
-            usedUrls.add(finalUrl);
-            validResults.push({
-                title: res.title,
-                url: finalUrl,
-                snippet: res.snippet
-            });
-        }
-    }
-
-    return validResults.slice(0, 3);
-
-  } catch (error) {
-    console.error("Error searching chords:", error);
-    return [];
+          allResults.push(res);
+          uniqueUrls.add(res.url);
+      }
   }
+
+  // Limit to reasonable amount but ensure diversity
+  return allResults.slice(0, 15);
 };
+
+// Helper for clean display
+function getDomainFromUrl(url: string) {
+    try {
+        return new URL(url).hostname.replace('www.', '');
+    } catch {
+        return 'Web Result';
+    }
+}

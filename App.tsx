@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   DndContext, 
@@ -21,7 +20,7 @@ import {
   Plus, Music, Clock, Users, BarChart2, GripVertical, 
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
-  Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus
+  Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -65,18 +64,47 @@ const getLocalDate = () => {
   return new Date(d.getTime() - offset).toISOString().split('T')[0];
 };
 
+// Extract domain for display
+const getDomain = (url?: string, title?: string) => {
+  if (!url) return '';
+  try {
+      const hostname = new URL(url).hostname;
+      // Handle ugly Google/Vertex wrapper links
+      if (hostname.includes('vertexaisearch') || hostname.includes('google')) {
+          if (title) {
+            const lowerTitle = title.toLowerCase();
+            if (lowerTitle.includes('ultimate')) return 'ultimate-guitar.com';
+            if (lowerTitle.includes('tab4u')) return 'tab4u.com';
+            if (lowerTitle.includes('negina')) return 'negina.co.il';
+            if (lowerTitle.includes('nagnu')) return 'nagnu.co.il';
+            if (lowerTitle.includes('songsterr')) return 'songsterr.com';
+            if (lowerTitle.includes('e-chords')) return 'e-chords.com';
+          }
+          return 'Search Result';
+      }
+      return hostname.replace('www.', '').replace('tabs.', '');
+  } catch { return 'link'; }
+};
+
 // --- Utility Components ---
 
-const Modal = ({ isOpen, onClose, children, title }: { isOpen: boolean; onClose: () => void; children: React.ReactNode; title: string }) => {
+const Modal = ({ isOpen, onClose, children, title, size = 'md' }: { isOpen: boolean; onClose: () => void; children: React.ReactNode; title: string, size?: 'md' | 'lg' | 'xl' }) => {
   if (!isOpen) return null;
+  
+  const sizeClasses = {
+      md: 'max-w-lg',
+      lg: 'max-w-3xl',
+      xl: 'max-w-5xl h-[90vh]'
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
-      <div className="bg-jam-800 border border-jam-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full max-w-lg max-h-[90vh] overflow-y-auto ring-1 ring-white/10 animate-fade-in scrollbar-thin scrollbar-thumb-jam-600">
-        <div className="flex justify-between items-center p-5 border-b border-jam-700 bg-jam-800/50 sticky top-0 backdrop-blur-sm z-10">
-          <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
+      <div className={`bg-jam-800 border border-jam-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto ring-1 ring-white/10 animate-fade-in scrollbar-thin scrollbar-thumb-jam-600 flex flex-col`}>
+        <div className="flex justify-between items-center p-5 border-b border-jam-700 bg-jam-800/50 sticky top-0 backdrop-blur-sm z-10 shrink-0">
+          <h2 className="text-xl font-bold text-white tracking-tight truncate pr-4">{title}</h2>
           <button onClick={onClose} className="text-jam-400 hover:text-white transition-colors bg-jam-700/50 hover:bg-jam-700 rounded-full p-1">&times;</button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
@@ -100,12 +128,13 @@ const Button = ({ onClick, children, variant = 'primary', className = '', disabl
 // --- Sortable Item Component ---
 
 function SortableSongItem({ 
-  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage
+  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage, onRate
 }: { 
   song: SongChoice; index: number; participant?: JamParticipant; 
   onMarkPlaying?: () => void; onMarkPlayed?: () => void; onDelete?: () => void; onRevive?: () => void; onEdit?: () => void; onUnsteal?: () => void;
   isCurrent: boolean;
   onViewImage?: (url: string) => void;
+  onRate?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: song.id });
   
@@ -117,11 +146,11 @@ function SortableSongItem({
   const isPlayed = song.playStatus === 'played';
 
   return (
-    <div ref={setNodeRef} style={style} className={`relative mb-3 group ${isPlayed ? 'opacity-60' : ''}`}>
+    <div ref={setNodeRef} style={style} className={`relative mb-3 group ${isPlayed ? 'opacity-80' : ''}`}>
       <div className={`
         flex items-center gap-4 p-4 rounded-xl border transition-all duration-300
         ${isCurrent ? 'bg-jam-800 border-orange-500/50 shadow-[0_0_25px_rgba(249,115,22,0.1)]' : 'bg-jam-800 border-jam-700 hover:border-jam-600 hover:bg-jam-700/50'}
-        ${isPlayed ? 'bg-jam-900 border-jam-800' : ''}
+        ${isPlayed ? 'bg-jam-900 border-jam-800 hover:bg-jam-800' : ''}
         ${song.isStolen ? 'border-l-4 border-l-red-500/80 bg-red-900/5' : ''}
       `}>
         {!isPlayed && (
@@ -144,7 +173,7 @@ function SortableSongItem({
           <div className="flex gap-3 mt-2">
              {song.chordLink && (
                <a href={song.chordLink} target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-xs flex items-center gap-1.5 text-orange-400 hover:text-orange-300 hover:bg-jam-700 transition-colors" onPointerDown={(e) => e.stopPropagation()}>
-                 <ExternalLink size={10} /> Chords
+                 <ExternalLink size={10} /> Link to Chords
                </a>
              )}
              {song.chordScreenshotUrl && (
@@ -173,6 +202,13 @@ function SortableSongItem({
             <button onClick={onMarkPlayed} className="p-3 text-green-400 hover:text-green-300 bg-green-500/10 border border-green-500/30 rounded-full animate-pulse transition-all" title="Mark as Played">
               <CheckCircle size={20} />
             </button>
+          )}
+
+          {/* Rate Button for Played Songs (Retroactive) */}
+          {isPlayed && onRate && (
+             <button onClick={onRate} className="p-2 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-full transition-all" title="Rate this song">
+               <Star size={18} />
+             </button>
           )}
 
           {/* Edit Button */}
@@ -246,6 +282,10 @@ export default function App() {
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
   const [proxyUserToAdd, setProxyUserToAdd] = useState<string>('');
   const [proxyArrivalTime, setProxyArrivalTime] = useState<string>('');
+
+  // Edit Arrival Time State
+  const [editingParticipant, setEditingParticipant] = useState<JamParticipant | null>(null);
+  const [editArrivalTimeValue, setEditArrivalTimeValue] = useState<string>('');
 
   const [newSong, setNewSong] = useState({ 
     title: '', artist: '', ownerId: '', 
@@ -368,8 +408,8 @@ export default function App() {
   const handleJoinSelection = (userName: UserName) => {
     setJoiningUser(userName);
     const now = new Date();
-    // Default to HH:MM:SS for precision
-    setManualArrivalTime(now.toLocaleTimeString('en-GB', { hour12: false }));
+    const timeString = now.toTimeString().split(' ')[0]; // HH:mm:ss
+    setManualArrivalTime(timeString);
   };
 
   const confirmJoin = (timeMode: 'now' | 'manual') => {
@@ -381,10 +421,10 @@ export default function App() {
 
     const existing = participants.find(p => p.userId === userId);
     if (!existing) {
-      // FIX: Use session date string explicitly to construct local time
+      const timePart = manualArrivalTime.length === 5 ? manualArrivalTime + ':00' : manualArrivalTime;
       const arrival = timeMode === 'now' 
         ? Date.now() 
-        : new Date(`${session.date}T${manualArrivalTime}`).getTime();
+        : new Date(`${session.date}T${timePart}`).getTime();
       
       const p: JamParticipant = {
         id: generateId(),
@@ -409,7 +449,8 @@ export default function App() {
   const handleAddProxyParticipant = () => {
     setProxyUserToAdd('');
     const now = new Date();
-    setProxyArrivalTime(now.toLocaleTimeString('en-GB', { hour12: false }));
+    const timeString = now.toTimeString().split(' ')[0];
+    setProxyArrivalTime(timeString);
     setShowAddParticipantModal(true);
   };
 
@@ -420,8 +461,8 @@ export default function App() {
     const existing = participants.find(p => p.userId === userId);
     
     if (!existing) {
-        // FIX: Use session date explicitly
-        const arrival = new Date(`${session.date}T${proxyArrivalTime}`).getTime();
+        const timePart = proxyArrivalTime.length === 5 ? proxyArrivalTime + ':00' : proxyArrivalTime;
+        const arrival = new Date(`${session.date}T${timePart}`).getTime();
         const p: JamParticipant = {
             id: generateId(),
             sessionId: session.id,
@@ -438,6 +479,33 @@ export default function App() {
         updateData('queueIds', newQueue);
     }
     setShowAddParticipantModal(false);
+  };
+
+  const openEditParticipantModal = (p: JamParticipant) => {
+      setEditingParticipant(p);
+      const d = new Date(p.arrivalTime);
+      const timeString = d.toTimeString().split(' ')[0];
+      setEditArrivalTimeValue(timeString);
+  };
+
+  const saveParticipantEdit = () => {
+      if (!editingParticipant || !session) return;
+      
+      const timePart = editArrivalTimeValue.length === 5 ? editArrivalTimeValue + ':00' : editArrivalTimeValue;
+      const newArrival = new Date(`${session.date}T${timePart}`).getTime();
+
+      const newParticipants = participants.map(p => 
+          p.id === editingParticipant.id ? { ...p, arrivalTime: newArrival } : p
+      );
+      
+      setParticipants(newParticipants);
+      updateData('participants', newParticipants);
+      
+      const newQueue = rebalanceQueue(songs, newParticipants, queueIds);
+      setQueueIds(newQueue);
+      updateData('queueIds', newQueue);
+      
+      setEditingParticipant(null);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -535,8 +603,13 @@ export default function App() {
     setIsSearching(false);
   };
 
+  // Select a result from search
+  const selectSearchResult = (result: ChordSearchResult) => {
+      setNewSong({ ...newSong, link: result.url });
+  };
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -691,6 +764,14 @@ export default function App() {
   }, [ratings, participants]);
 
   const activeQueue = queueIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as SongChoice[];
+  
+  // NEW: Played Songs list for main view (sorted newest played LAST, essentially chronologically or reverse?)
+  // Usually for a log you want newest played at top, or bottom? User requested "played songs list in order".
+  // Let's do chronological (Song 1, Song 2...)
+  const playedSongsList = songs
+    .filter(s => s.playStatus === 'played')
+    .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
+
   const isFormValid = newSong.title && newSong.ownerId && (newSong.link || newSong.screenshot);
 
   // --- Render ---
@@ -742,637 +823,600 @@ export default function App() {
           </div>
           <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto mb-6 pr-2 scrollbar-thin scrollbar-thumb-jam-600">
             {ALL_USERS.map(u => (
-              <button key={u} onClick={() => handleJoinSelection(u)} className="bg-jam-700/50 hover:bg-orange-600 hover:text-white p-3 rounded-lg text-sm font-medium transition-all text-left text-jam-200 border border-transparent hover:border-orange-400">{u}</button>
+              <button key={u} onClick={() => handleJoinSelection(u)} className="bg-jam-700/50 hover:bg-orange-600 hover:text-white p-3 rounded-lg text-sm font-medium transition-all text-left text-jam-200 border border-transparent hover:border-orange-500/50">
+                {u}
+              </button>
             ))}
           </div>
+          <div className="text-center text-xs text-jam-500">
+            Current Session: <span className="text-jam-300 font-mono">{session?.date || getLocalDate()}</span>
+          </div>
+
+          {/* Session Preview for unauthenticated users */}
+          {session && (
+            <div className="mt-8 pt-6 border-t border-jam-700 w-full">
+                <h3 className="text-jam-400 text-xs font-bold uppercase mb-3 text-center">Current Session</h3>
+                <div className="bg-jam-900/50 rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-jam-300">Participants</span>
+                        <span className="text-white font-bold">{participants.length}</span>
+                    </div>
+                     <div className="flex justify-between items-center text-sm">
+                        <span className="text-jam-300">Songs in Queue</span>
+                        <span className="text-white font-bold">{queueIds.length}</span>
+                    </div>
+                     <div className="flex justify-between items-center text-sm">
+                        <span className="text-jam-300">Songs Played</span>
+                        <span className="text-white font-bold">{songs.filter(s => s.playStatus === 'played').length}</span>
+                    </div>
+                    {/* Show last 3 played songs */}
+                    {songs.filter(s => s.playStatus === 'played').length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-jam-700/50">
+                            <p className="text-xs text-jam-500 mb-2">Recently Played:</p>
+                            <div className="space-y-1">
+                                {songs
+                                    .filter(s => s.playStatus === 'played')
+                                    .sort((a,b) => (b.playedAt || 0) - (a.playedAt || 0)) // Newest first for preview
+                                    .slice(0, 3)
+                                    .map(s => (
+                                        <div key={s.id} className="text-xs text-jam-300 truncate">
+                                            🎶 {s.title} <span className="text-jam-500">- {s.ownerName}</span>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+          )}
 
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row max-w-7xl mx-auto bg-jam-950 shadow-2xl shadow-black">
-      {/* Sidebar / Topbar */}
-      <div className="w-full md:w-72 bg-jam-800/80 p-5 flex flex-col gap-6 md:h-screen md:sticky md:top-0 z-20 border-b md:border-b-0 md:border-r border-jam-700 backdrop-blur-md">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-600 rounded-lg"><Guitar size={20} className="text-white" /></div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">GS Jam</h1>
-          </div>
-          <p className="text-sm text-jam-400 flex items-center gap-2 mb-3"><Calendar size={14} /> {session?.date}</p>
-          <div className="flex items-center justify-between bg-jam-700/50 px-3 py-2 rounded-full border border-jam-600/50">
-             <div className="text-xs text-jam-200">
-                <span className="text-jam-400 block text-[10px] uppercase">Logged in as</span>
-                <span className="text-orange-400 font-bold">{currentUser.name}</span>
-             </div>
-             <button onClick={() => setCurrentUser(null)} className="text-jam-400 hover:text-white p-1 rounded-full hover:bg-jam-600 transition-colors" title="Log Out"><LogOut size={14} /></button>
-          </div>
-        </div>
+  // --- Main View (Logged In) ---
 
-        <nav className="flex md:flex-col gap-2">
-          <Button variant={view === 'jam' ? 'primary' : 'ghost'} onClick={() => setView('jam')} className="justify-start w-full"><Music size={18} /> Jam Queue</Button>
-          <Button variant={view === 'stats' ? 'primary' : 'ghost'} onClick={() => setView('stats')} className="justify-start w-full"><BarChart2 size={18} /> Stats</Button>
-          {isFirebaseConnected && (
-             <div className="md:mt-auto flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+  return (
+    <div className="min-h-screen bg-jam-950 text-jam-100 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-jam-900 border-r border-jam-800 flex flex-col fixed h-full z-20 hidden md:flex">
+        <div className="p-6 border-b border-jam-800">
+           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+             <span className="text-orange-500">GS</span> Jam
+           </h1>
+           <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-green-400 uppercase tracking-wider">Online</span>
-             </div>
-          )}
+                <span className="text-xs font-bold text-jam-300 uppercase tracking-wider">Live Session</span>
+              </div>
+              <div className="text-xs text-jam-500 font-mono">{session?.date}</div>
+           </div>
+        </div>
+        
+        <nav className="p-4 space-y-1">
+          <button onClick={() => setView('jam')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${view === 'jam' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
+            <Music size={18} /> Today's Jam
+          </button>
+          <button onClick={() => setView('stats')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${view === 'stats' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
+            <BarChart2 size={18} /> Stats & History
+          </button>
         </nav>
 
-        <div className="hidden md:flex flex-1 flex-col overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold uppercase text-jam-500 tracking-wider flex items-center gap-2"><Users size={14} /> Participants ({participants.length})</h3>
-              <button onClick={handleAddProxyParticipant} className="text-jam-400 hover:text-white hover:bg-jam-700 p-1 rounded transition-colors" title="Add participant for them">
-                 <UserPlus size={16} />
-              </button>
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex items-center justify-between mb-3 px-2">
+            <h3 className="text-xs font-bold text-jam-500 uppercase tracking-wider">Participants</h3>
+            <button onClick={handleAddProxyParticipant} className="text-jam-500 hover:text-orange-400 transition-colors" title="Add Participant">
+                <UserPlus size={14} />
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-jam-600">
-            {participants.sort((a,b) => a.arrivalTime - b.arrivalTime).map(p => (
-              <div key={p.id} className="flex justify-between items-center text-sm p-3 bg-jam-900/50 rounded-lg border border-jam-700/50 hover:border-jam-600 transition-colors">
-                <span className="text-jam-200 font-medium">{p.name}</span>
-                <span className="text-xs text-jam-500 font-mono bg-jam-800 px-1.5 py-0.5 rounded">{new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          <div className="space-y-2">
+            {[...participants].sort((a,b) => a.arrivalTime - b.arrivalTime).map(p => (
+              <div key={p.id} className="group flex items-center justify-between p-3 rounded-lg bg-jam-800/50 border border-jam-800 hover:border-jam-700 transition-colors">
+                <div>
+                   <div className="text-sm font-medium text-white">{p.name}</div>
+                   <div className="text-xs text-jam-500 flex items-center gap-1">
+                     <Clock size={10} /> {new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   </div>
+                </div>
+                {/* Edit Arrival Time Button */}
+                <button onClick={() => openEditParticipantModal(p)} className="opacity-0 group-hover:opacity-100 text-jam-500 hover:text-white transition-opacity">
+                    <Pencil size={12} />
+                </button>
               </div>
             ))}
+            {participants.length === 0 && <div className="text-xs text-jam-600 italic px-2">No one here yet...</div>}
           </div>
         </div>
-      </div>
+
+        <div className="p-4 border-t border-jam-800 bg-jam-900/50">
+           <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-jam-500">Logged in as</span>
+              <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-red-400 transition-colors" title="Logout">
+                  <LogOut size={14} />
+              </button>
+           </div>
+           <div className="font-bold text-white truncate">{currentUser.name}</div>
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-jam-950 pb-40">
-        {view === 'jam' && (
-          <div className="max-w-3xl mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Queue</h2>
-                <p className="text-jam-400 text-sm flex items-center gap-2"><ShieldAlert size={14} className="text-orange-500" />Fair round-robin active. Drag to steal a spot.</p>
-              </div>
-              <Button onClick={openAddModal} className="w-full sm:w-auto"><Plus size={18} /> Add Song</Button>
-            </div>
+      <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between mb-6">
+           <div className="font-bold text-xl text-white">GS <span className="text-orange-500">Jam</span></div>
+           <div className="flex gap-2">
+              <button onClick={() => setView('jam')} className={`p-2 rounded-lg ${view === 'jam' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}><Music size={20}/></button>
+              <button onClick={() => setView('stats')} className={`p-2 rounded-lg ${view === 'stats' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}><BarChart2 size={20}/></button>
+              <button onClick={() => setCurrentUser(null)} className="p-2 rounded-lg bg-jam-800 text-red-400"><LogOut size={20}/></button>
+           </div>
+        </div>
 
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3 pb-8">
-                  {activeQueue.length === 0 && (
-                    <div className="text-center py-16 border-2 border-dashed border-jam-800 rounded-3xl bg-jam-900/30">
-                      <div className="inline-block p-4 bg-jam-800 rounded-full mb-4"><Music size={40} className="text-jam-600" /></div>
-                      <h3 className="text-jam-200 font-bold text-lg mb-1">The stage is empty</h3>
-                      <p className="text-jam-500">Add a song to get the jam started!</p>
+        {view === 'jam' && (
+          <div className="max-w-3xl mx-auto space-y-6 pb-40">
+             <div className="flex items-center justify-between">
+               <div>
+                  <h2 className="text-3xl font-bold text-white">Queue</h2>
+                  <p className="text-jam-400 text-sm">Drag to reorder • Fair by default</p>
+               </div>
+               <Button onClick={openAddModal}>
+                 <Plus size={18} /> Add Song
+               </Button>
+             </div>
+
+             <DndContext 
+                sensors={sensors} 
+                collisionDetection={closestCenter} 
+                onDragEnd={handleDragEnd}
+             >
+               <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
+                 <div className="space-y-3 min-h-[100px]">
+                   {activeQueue.length === 0 ? (
+                      <div className="text-center py-12 border-2 border-dashed border-jam-800 rounded-2xl text-jam-500">
+                        <Music size={48} className="mx-auto mb-3 opacity-20" />
+                        <p>No songs in the queue yet.</p>
+                        <button onClick={openAddModal} className="text-orange-500 font-bold hover:underline mt-2">Add the first one!</button>
+                      </div>
+                   ) : (
+                      activeQueue.map((song, index) => (
+                        <SortableSongItem 
+                          key={song.id} 
+                          song={song} 
+                          index={index}
+                          isCurrent={song.playStatus === 'playing'}
+                          onMarkPlaying={() => updateStatus(song.id, 'playing')}
+                          onMarkPlayed={() => updateStatus(song.id, 'played')}
+                          onDelete={() => deleteSong(song.id)}
+                          onEdit={() => openEditModal(song)}
+                          onUnsteal={() => unstealSong(song.id)}
+                          onViewImage={setViewingImage}
+                        />
+                      ))
+                   )}
+                 </div>
+               </SortableContext>
+             </DndContext>
+
+             {/* Played Songs Section - Always visible if songs exist */}
+             {playedSongsList.length > 0 && (
+                 <div className="mt-12 pt-8 border-t border-jam-800">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <History size={20} className="text-jam-500" />
+                        Played Songs
+                    </h3>
+                    <div className="space-y-3 opacity-80">
+                        {playedSongsList.map((song, index) => {
+                           // Check if current user has rated this song
+                           // If currentUser is not set (rare, but possible if viewing page without logging in), assume false
+                           const hasRated = currentUser ? ratings.some(r => r.songChoiceId === song.id && r.userId === currentUser.id) : true;
+
+                           return (
+                               <SortableSongItem
+                                  key={song.id}
+                                  song={song}
+                                  index={index}
+                                  isCurrent={false}
+                                  onRevive={() => reviveSong(song.id)}
+                                  onViewImage={setViewingImage}
+                                  // Show rate button if logged in and not rated
+                                  onRate={(!hasRated && currentUser) ? () => setShowRatingModal(song) : undefined}
+                               />
+                           );
+                        })}
                     </div>
-                  )}
-                  {activeQueue.map((song, index) => (
-                    <SortableSongItem 
-                      key={song.id} 
-                      song={song} 
-                      index={index} 
-                      participant={participants.find(p => p.userId === song.ownerUserId)}
-                      onMarkPlaying={() => updateStatus(song.id, 'playing')}
-                      onMarkPlayed={() => updateStatus(song.id, 'played')}
-                      onDelete={() => deleteSong(song.id)}
-                      onEdit={() => openEditModal(song)}
-                      onUnsteal={() => unstealSong(song.id)}
-                      onViewImage={setViewingImage}
-                      isCurrent={song.playStatus === 'playing'}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-            
-            {/* Minimal Recently Played (Newest First) */}
-            {sessionDigest.length > 0 && (
-              <div className="mt-12 pt-8 border-t border-jam-800">
-                <h3 className="text-lg font-bold text-jam-300 mb-6 flex items-center gap-2 uppercase tracking-wider text-xs"><Clock size={16} /> Recently Played</h3>
-                <div className="opacity-80 hover:opacity-100 transition-opacity space-y-2">
-                   {sessionDigest.sort((a,b) => (b.playedAt||0) - (a.playedAt||0)).slice(0, 5).map((item, idx) => (
-                     <SortableSongItem key={item.id} song={item} index={idx} isCurrent={false} onRevive={() => reviveSong(item.id)} onEdit={() => openEditModal(item)} onViewImage={setViewingImage} />
-                   ))}
-                </div>
-              </div>
-            )}
+                 </div>
+             )}
           </div>
         )}
 
         {view === 'stats' && (
-          <div className="max-w-5xl mx-auto animate-fade-in pb-12">
-            <header className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-6">Stats & Insights</h2>
-              <div className="flex flex-wrap gap-2 border-b border-jam-800 pb-1">
-                <button onClick={() => setStatsTab('today')} className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-colors ${statsTab === 'today' ? 'bg-jam-800 text-orange-400 border-b-2 border-orange-500' : 'text-jam-500 hover:text-white'}`}>Today's Jam</button>
-                <button onClick={() => setStatsTab('history')} className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-colors ${statsTab === 'history' ? 'bg-jam-800 text-orange-400 border-b-2 border-orange-500' : 'text-jam-500 hover:text-white'}`}>History</button>
-                <button onClick={() => setStatsTab('leaderboards')} className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-colors ${statsTab === 'leaderboards' ? 'bg-jam-800 text-orange-400 border-b-2 border-orange-500' : 'text-jam-500 hover:text-white'}`}>Leaderboards</button>
-                <button onClick={() => setStatsTab('taste')} className={`px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-t-lg transition-colors ${statsTab === 'taste' ? 'bg-jam-800 text-orange-400 border-b-2 border-orange-500' : 'text-jam-500 hover:text-white'}`}>Taste Buds</button>
+           <div className="max-w-4xl mx-auto pb-40">
+              <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                 {[
+                   { id: 'today', label: 'Today', icon: Activity },
+                   { id: 'history', label: 'History', icon: History },
+                   { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
+                   { id: 'taste', label: 'Taste Buds', icon: Heart },
+                 ].map(tab => (
+                    <button 
+                      key={tab.id}
+                      onClick={() => setStatsTab(tab.id as any)}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${statsTab === tab.id ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400 hover:bg-jam-700'}`}
+                    >
+                      <tab.icon size={16} /> {tab.label}
+                    </button>
+                 ))}
               </div>
-            </header>
 
-            {(statsTab === 'today' || statsTab === 'history') && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Special Header for History Tab */}
-                {statsTab === 'history' && (
-                   <div className="lg:col-span-3 bg-jam-800 p-6 rounded-xl border border-jam-700 flex flex-col md:flex-row items-center gap-6 justify-between mb-2">
-                     <div>
-                       <h3 className="font-bold text-white text-lg">Time Machine</h3>
-                       <p className="text-jam-400 text-sm">View details from previous jams.</p>
-                     </div>
-                     <div className="flex items-center gap-3">
-                       <div className="relative">
-                           <select 
-                             value={historyDate} 
-                             onChange={(e) => setHistoryDate(e.target.value)}
-                             className="bg-jam-900 border border-jam-600 rounded-lg py-2 pl-3 pr-8 text-white outline-none focus:border-orange-500 appearance-none min-w-[200px]"
-                           >
-                             <option value="" disabled>Select a Date</option>
-                             {Object.keys(archives).sort().reverse().map(date => (
-                               <option key={date} value={date}>{date}</option>
-                             ))}
-                             {Object.keys(archives).length === 0 && <option value="" disabled>No past jams found</option>}
-                           </select>
-                           <ChevronDown size={14} className="absolute right-3 top-3 text-jam-400 pointer-events-none" />
-                       </div>
-                       {historyDate && (
-                         <button onClick={() => deleteHistorySession(historyDate)} className="p-2.5 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white rounded-lg transition-all" title="Delete this record">
-                           <Trash2 size={18} />
-                         </button>
-                       )}
-                     </div>
-                   </div>
-                )}
-                
-                {statsTab === 'history' && !historyDate && (
-                    <div className="lg:col-span-3 text-center py-20 bg-jam-900/50 rounded-xl border border-dashed border-jam-700">
-                        <History size={48} className="mx-auto text-jam-600 mb-4" />
-                        <p className="text-jam-400">Please select a date from the dropdown to view its history.</p>
-                    </div>
-                )}
+              {statsTab === 'today' && (
+                 <div className="animate-fade-in space-y-8">
+                    {/* Top Rated Section */}
+                    {leaderboard.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                    <Trophy className="text-yellow-400" size={20} /> Crowd Favorites
+                                </h3>
+                                <div className="space-y-5">
+                                    {leaderboard.slice(0, 5).map((item, idx) => (
+                                        <div key={item.song.id} className="relative">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-2xl font-bold text-jam-600 w-6">#{idx + 1}</div>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-white">{item.song.title}</div>
+                                                    <div className="text-xs text-jam-400">{item.song.ownerName}</div>
+                                                    
+                                                    {/* Vote Breakdown Visuals */}
+                                                    <div className="flex gap-1 mt-1.5">
+                                                        {Array.from({length: item.breakdown.highlight}).map((_, i) => <div key={`h-${i}`} className="w-2 h-2 rounded-full bg-green-400"></div>)}
+                                                        {Array.from({length: item.breakdown.sababa}).map((_, i) => <div key={`s-${i}`} className="w-2 h-2 rounded-full bg-yellow-400"></div>)}
+                                                        {Array.from({length: item.breakdown.ok}).map((_, i) => <div key={`o-${i}`} className="w-2 h-2 rounded-full bg-gray-600"></div>)}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Donut Chart */}
+                                                <div className="relative w-12 h-12 rounded-full flex items-center justify-center bg-jam-800"
+                                                    style={{
+                                                        background: `conic-gradient(
+                                                            #4ade80 0% ${(item.breakdown.highlight / item.totalVotes) * 100}%,
+                                                            #facc15 ${(item.breakdown.highlight / item.totalVotes) * 100}% ${((item.breakdown.highlight + item.breakdown.sababa) / item.totalVotes) * 100}%,
+                                                            #4b5563 ${((item.breakdown.highlight + item.breakdown.sababa) / item.totalVotes) * 100}% 100%
+                                                        )`
+                                                    }}
+                                                >
+                                                    <div className="absolute inset-2 bg-jam-800 rounded-full"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Who voted what */}
+                                            <div className="mt-2 text-[10px] text-jam-500 pl-10">
+                                                {activeStatsRatings.filter(r => r.songChoiceId === item.song.id && (r.value === 'Highlight' || r.value === 'Sababa')).map(r => {
+                                                    const voterName = participants.find(p => p.userId === r.userId)?.name.split(' ')[0];
+                                                    return (
+                                                        <span key={r.id} className={`inline-block mr-2 ${r.value === 'Highlight' ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                            {voterName}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                    <Clock className="text-blue-400" size={20} /> Session Log
+                                </h3>
+                                <div className="relative border-l-2 border-jam-700 ml-3 space-y-6">
+                                    {arrivalTimeline.map((p, i) => (
+                                        <div key={p.id} className="relative pl-6">
+                                            <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-jam-900 border-2 border-blue-500"></div>
+                                            <div className="text-sm font-bold text-white">{p.name} arrived</div>
+                                            <div className="text-xs text-jam-500">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                {/* Main Content for Today OR Selected History */}
-                {(statsTab === 'today' || (statsTab === 'history' && historyDate)) && (
-                  <>
-                    {/* Column 1: Timeline */}
-                    <div className="bg-jam-800 rounded-xl p-6 border border-jam-700 h-fit">
-                       <h3 className="text-sm font-bold uppercase text-jam-400 mb-4 flex items-center gap-2"><Clock size={16}/> Arrivals</h3>
-                       <div className="space-y-4 relative pl-4 border-l border-jam-700">
-                         {arrivalTimeline.length === 0 && <div className="text-xs text-jam-500 italic">No participants recorded.</div>}
-                         {arrivalTimeline.map((p, i) => (
-                           <div key={p.id} className="relative">
-                             <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-jam-600 border border-jam-900"></div>
-                             <div className="text-sm text-white font-bold">{p.name}</div>
-                             <div className="text-xs text-jam-500">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                           </div>
-                         ))}
-                       </div>
-                    </div>
-
-                    {/* Column 2 & 3: Played Songs Table */}
-                    <div className="lg:col-span-2 space-y-6">
-                       {/* Top Rated Podium (Top 5 with Donuts) */}
-                       {sessionDigest.length > 0 && (
-                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                             {sessionDigest.sort((a,b) => (b.score?.score||0) - (a.score?.score||0)).slice(0,5).map((s, i) => {
-                               // Calculate Voters
-                               const voters = activeStatsRatings.filter(r => r.songChoiceId === s.id);
-                               const highlights = voters.filter(r => r.value === 'Highlight');
-                               const sababas = voters.filter(r => r.value === 'Sababa');
-                               const others = voters.length - highlights.length - sababas.length;
-
-                               // Simple Gradient for donut: Highlight (Yellow) | Sababa (Green) | Others (Gray)
-                               const total = voters.length || 1;
-                               const degH = (highlights.length / total) * 360;
-                               const degS = degH + (sababas.length / total) * 360;
-                               
-                               const gradient = `conic-gradient(#facc15 0deg ${degH}deg, #4ade80 ${degH}deg ${degS}deg, #3f3f46 ${degS}deg 360deg)`;
-
-                               return (
-                                 <div key={s.id} className="bg-jam-800 border border-jam-700 p-4 rounded-xl flex items-start gap-4 hover:border-orange-500/30 transition-all relative overflow-hidden group">
-                                   {/* Rank Badge */}
-                                   <div className="absolute -right-2 -top-2 w-12 h-12 bg-jam-900 rotate-12 flex items-end justify-start pl-3 pb-2 text-xl font-bold text-jam-700 group-hover:text-orange-500/20 transition-colors">#{i+1}</div>
-                                   
-                                   {/* Donut Chart */}
-                                   <div className="relative w-16 h-16 shrink-0 rounded-full flex items-center justify-center bg-jam-900" style={{background: gradient}}>
-                                      <div className="w-12 h-12 bg-jam-800 rounded-full flex items-center justify-center text-sm font-bold text-white z-10">
-                                        {s.score?.score}
-                                      </div>
-                                   </div>
-
-                                   <div className="flex-1 min-w-0 z-10">
-                                     <div className="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-0.5">Top Rated</div>
-                                     <div className="font-bold text-white truncate text-sm">{s.title}</div>
-                                     <div className="text-xs text-jam-400 mb-2">{s.ownerName}</div>
-                                     
-                                     {/* Voter Names */}
-                                     <div className="flex flex-wrap gap-1">
-                                        {highlights.map(r => {
-                                           const name = activeStatsParticipants.find(p => p.userId === r.userId)?.name.split(' ')[0] || r.userId;
-                                           return <span key={r.id} className="px-1.5 py-0.5 rounded bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-[9px] font-bold">{name}</span>
-                                        })}
-                                        {sababas.map(r => {
-                                           const name = activeStatsParticipants.find(p => p.userId === r.userId)?.name.split(' ')[0] || r.userId;
-                                           return <span key={r.id} className="px-1.5 py-0.5 rounded bg-green-400/10 text-green-400 border border-green-400/20 text-[9px] font-bold">{name}</span>
-                                        })}
-                                     </div>
-                                   </div>
-                                 </div>
-                               );
-                             })}
-                           </div>
-                       )}
-
-                       <div className="bg-jam-800 rounded-xl border border-jam-700 overflow-hidden">
-                          <div className="p-4 border-b border-jam-700 bg-jam-800/50 flex justify-between items-center">
-                            <h3 className="font-bold text-white">Played Songs (Setlist)</h3>
-                            <span className="text-xs text-jam-400">{sessionDigest.length} Songs</span>
-                          </div>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                              <thead className="bg-jam-900/50 text-jam-400 uppercase text-xs font-bold">
+                    {/* Session Digest Table */}
+                    <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-jam-900 text-jam-400 uppercase text-xs font-bold tracking-wider">
                                 <tr>
-                                  <th className="p-4">Time</th>
-                                  <th className="p-4">Song</th>
-                                  <th className="p-4">Picked By</th>
+                                    <th className="p-4">Time</th>
+                                    <th className="p-4">Song</th>
+                                    <th className="p-4">Picked By</th>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-jam-700/50">
-                                {sessionDigest.length === 0 && (
-                                    <tr><td colSpan={3} className="p-8 text-center text-jam-500">No songs played yet.</td></tr>
-                                )}
-                                {sessionDigest.sort((a,b) => (a.playedAt || 0) - (b.playedAt || 0)).map(s => (
-                                  <tr key={s.id} className="hover:bg-jam-700/20 transition-colors">
-                                    <td className="p-4 text-jam-500 font-mono text-xs w-24">
-                                      {s.playedAt ? new Date(s.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
-                                    </td>
-                                    <td className="p-4 font-medium text-white">
-                                      {s.title} <span className="block text-xs text-jam-500 font-normal">{s.artist}</span>
-                                    </td>
-                                    <td className="p-4 text-jam-300">{s.ownerName}</td>
-                                  </tr>
+                            </thead>
+                            <tbody className="divide-y divide-jam-700">
+                                {sessionDigest.map((row) => (
+                                    <tr key={row.id} className="hover:bg-jam-700/30 transition-colors">
+                                        <td className="p-4 font-mono text-jam-500">
+                                            {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="font-bold text-white">{row.title}</div>
+                                            <div className="text-jam-400 text-xs">{row.artist}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-jam-700 flex items-center justify-center text-[10px] font-bold text-jam-300">
+                                                    {row.ownerName.charAt(0)}
+                                                </div>
+                                                <span className="text-jam-300">{row.ownerName}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 ))}
-                              </tbody>
-                            </table>
+                                {sessionDigest.length === 0 && (
+                                    <tr><td colSpan={3} className="p-8 text-center text-jam-500 italic">No songs played yet.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                 </div>
+              )}
+
+              {statsTab === 'history' && (
+                  <div className="space-y-6 animate-fade-in">
+                      <div className="flex items-center gap-4 bg-jam-800 p-4 rounded-xl border border-jam-700">
+                          <label className="text-sm font-bold text-jam-300">Select Date:</label>
+                          <div className="relative flex-1">
+                              <select 
+                                value={historyDate} 
+                                onChange={(e) => setHistoryDate(e.target.value)}
+                                className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-lg px-4 py-2 text-white outline-none focus:border-orange-500 cursor-pointer"
+                              >
+                                  <option value="">-- Choose a session --</option>
+                                  {Object.keys(archives).sort().reverse().map(date => (
+                                      <option key={date} value={date}>{date}</option>
+                                  ))}
+                              </select>
+                              <ChevronDown className="absolute right-3 top-3 text-jam-500 pointer-events-none" size={16} />
                           </div>
-                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {statsTab === 'leaderboards' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 {/* Left: Song Rankings */}
-                 <div className="bg-jam-800 rounded-xl border border-jam-700 overflow-hidden flex flex-col h-[600px]">
-                    <div className="p-4 border-b border-jam-700 bg-jam-800/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                       <h3 className="font-bold text-white flex items-center gap-2"><Trophy size={16} className="text-yellow-400"/> Song Rankings</h3>
-                       <div className="relative">
-                         <select 
-                           value={leaderboardPerspective}
-                           onChange={(e) => setLeaderboardPerspective(e.target.value)}
-                           className="bg-jam-900 border border-jam-600 text-xs text-white py-1.5 pl-3 pr-8 rounded-lg appearance-none outline-none focus:border-orange-500"
-                         >
-                           <option value="all">According to Everyone</option>
-                           {participants.map(p => <option key={p.id} value={p.userId}>According to {p.name}</option>)}
-                         </select>
-                         <ChevronDown size={14} className="absolute right-2 top-2 text-jam-400 pointer-events-none" />
-                       </div>
-                    </div>
-                    <div className="overflow-y-auto flex-1 p-2 space-y-2 scrollbar-thin scrollbar-thumb-jam-600">
-                       {leaderboard.length === 0 && <div className="text-center p-8 text-jam-500 text-sm">No rated songs yet.</div>}
-                       {leaderboard.map((item, i) => (
-                         <div key={item.song.id} className="flex items-center gap-3 p-3 bg-jam-900/50 rounded-lg hover:bg-jam-700/50 transition-colors group">
-                            <div className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm ${i < 3 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-jam-800 text-jam-500'}`}>
-                              #{i+1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                               <div className="font-bold text-white truncate text-sm">{item.song.title}</div>
-                               <div className="text-xs text-jam-400 flex items-center gap-1">{item.song.ownerName} <span className="text-jam-600">•</span> {item.totalVotes} votes</div>
-                            </div>
-                            <div className="text-right">
-                               <div className="text-lg font-bold text-white">{item.score}</div>
-                               <div className="text-[10px] uppercase text-jam-500 font-bold tracking-wider">Score</div>
-                            </div>
-                         </div>
-                       ))}
-                    </div>
-                 </div>
-
-                 {/* Right: Crowd Pleasers */}
-                 <div className="space-y-6">
-                   <div className="bg-jam-800 rounded-xl border border-jam-700 p-6">
-                      <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Activity size={18} className="text-green-400"/> The Crowd Pleasers</h3>
-                      <p className="text-xs text-jam-400 mb-4">Who picks the songs that get the highest average ratings?</p>
-                      <div className="space-y-3">
-                         {crowdPleasers.slice(0, 5).map((cp, i) => {
-                           const participant = participants.find(p => p.userId === cp.userId);
-                           return (
-                             <div key={cp.userId} className="flex items-center justify-between p-3 rounded-lg bg-jam-900/30 border border-jam-700/50">
-                                <div className="flex items-center gap-3">
-                                   <div className="w-8 h-8 rounded-full bg-jam-700 flex items-center justify-center text-xs font-bold text-jam-300">
-                                     {i+1}
-                                   </div>
-                                   <div>
-                                      <div className="font-bold text-white text-sm">{participant?.name || cp.userId}</div>
-                                      <div className="text-xs text-jam-500">{cp.songCount} songs played</div>
-                                   </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-green-400 font-bold">{cp.avgScore} pts</div>
-                                  <div className="text-[10px] text-jam-500">Avg Score</div>
-                                </div>
-                             </div>
-                           );
-                         })}
+                          {historyDate && (
+                              <button onClick={() => deleteHistorySession(historyDate)} className="p-2 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg">
+                                  <Trash2 size={18} />
+                              </button>
+                          )}
                       </div>
-                   </div>
 
-                   <div className="bg-jam-800 rounded-xl border border-jam-700 p-6">
-                      <h3 className="font-bold text-white mb-4">Attendance (Demo)</h3>
-                      <div className="h-40 flex items-end justify-between gap-2">
-                          {participants.slice(0, 7).map(p => (
-                             <div key={p.id} className="flex flex-col items-center gap-2 flex-1 group">
-                                <div className="w-full bg-jam-700 rounded-t-sm relative h-24 group-hover:bg-orange-500/50 transition-colors overflow-hidden">
-                                   <div className="absolute bottom-0 w-full bg-orange-500" style={{height: `${Math.random() * 80 + 20}%`}}></div>
-                                </div>
-                                <span className="text-[10px] text-jam-400 truncate w-full text-center">{p.name}</span>
-                             </div>
-                          ))}
-                      </div>
-                   </div>
-                 </div>
-              </div>
-            )}
-
-            {statsTab === 'taste' && (
-               <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Soulmates Card */}
-                    <div className="bg-gradient-to-br from-indigo-900/20 to-jam-800 border border-indigo-500/30 p-6 rounded-2xl relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-10"><Heart size={120} /></div>
-                       <h3 className="text-indigo-300 font-bold uppercase tracking-widest text-xs mb-1">Musical Soulmates</h3>
-                       <p className="text-jam-400 text-sm mb-6">Highest similarity score based on shared ratings.</p>
-                       
-                       {tasteSimilarity.length > 0 ? (
-                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-white">{participants.find(p => p.userId === tasteSimilarity[0].userA)?.name}</div>
-                            </div>
-                            <div className="flex-1 border-t-2 border-dashed border-indigo-500/50 relative">
-                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-jam-950 px-2 text-indigo-400 font-bold text-xl">
-                                  {tasteSimilarity[0].score}%
-                                </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-white">{participants.find(p => p.userId === tasteSimilarity[0].userB)?.name}</div>
-                            </div>
-                         </div>
-                       ) : (
-                         <div className="text-jam-500 italic">Not enough shared ratings yet.</div>
-                       )}
-                    </div>
-
-                    {/* Nemesis Card */}
-                    <div className="bg-gradient-to-br from-red-900/20 to-jam-800 border border-red-500/30 p-6 rounded-2xl relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-10"><Activity size={120} /></div>
-                       <h3 className="text-red-300 font-bold uppercase tracking-widest text-xs mb-1">Musical Opposites</h3>
-                       <p className="text-jam-400 text-sm mb-6">Lowest similarity score.</p>
-                       
-                       {tasteSimilarity.length > 0 ? (
-                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-white">{participants.find(p => p.userId === tasteSimilarity[tasteSimilarity.length - 1].userA)?.name}</div>
-                            </div>
-                            <div className="flex-1 border-t-2 border-dashed border-red-500/50 relative">
-                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-jam-950 px-2 text-red-400 font-bold text-xl">
-                                  {tasteSimilarity[tasteSimilarity.length - 1].score}%
-                                </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-white">{participants.find(p => p.userId === tasteSimilarity[tasteSimilarity.length - 1].userB)?.name}</div>
-                            </div>
-                         </div>
-                       ) : (
-                         <div className="text-jam-500 italic">Not enough shared ratings yet.</div>
-                       )}
-                    </div>
+                      {historyDate && (
+                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden">
+                              <table className="w-full text-left text-sm">
+                                  <thead className="bg-jam-900 text-jam-400 uppercase text-xs font-bold tracking-wider">
+                                      <tr>
+                                          <th className="p-4">Time</th>
+                                          <th className="p-4">Song</th>
+                                          <th className="p-4">Picked By</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-jam-700">
+                                      {sessionDigest.map((row) => (
+                                          <tr key={row.id} className="hover:bg-jam-700/30 transition-colors">
+                                              <td className="p-4 font-mono text-jam-500">
+                                                  {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
+                                              </td>
+                                              <td className="p-4">
+                                                  <div className="font-bold text-white">{row.title}</div>
+                                                  <div className="text-jam-400 text-xs">{row.artist}</div>
+                                              </td>
+                                              <td className="p-4">
+                                                  <div className="flex items-center gap-2">
+                                                      <div className="w-6 h-6 rounded-full bg-jam-700 flex items-center justify-center text-[10px] font-bold text-jam-300">
+                                                          {row.ownerName.charAt(0)}
+                                                      </div>
+                                                      <span className="text-jam-300">{row.ownerName}</span>
+                                                  </div>
+                                              </td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      )}
                   </div>
-
-                  {/* Matrix List */}
-                  <div className="bg-jam-800 rounded-xl border border-jam-700 p-6">
-                     <h3 className="font-bold text-white mb-4">All Compatibility Scores</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {tasteSimilarity.map((pair, i) => {
-                          const nameA = participants.find(p => p.userId === pair.userA)?.name || pair.userA;
-                          const nameB = participants.find(p => p.userId === pair.userB)?.name || pair.userB;
-                          return (
-                            <div key={i} className="flex justify-between items-center p-3 bg-jam-900/50 rounded-lg text-sm border border-jam-700/50">
-                               <span className="text-jam-200">{nameA} & {nameB}</span>
-                               <span className={`font-mono font-bold ${pair.score > 70 ? 'text-green-400' : pair.score < 40 ? 'text-red-400' : 'text-yellow-400'}`}>
-                                 {pair.score}%
-                               </span>
-                            </div>
-                          )
-                        })}
-                     </div>
-                  </div>
-               </div>
-            )}
-          </div>
+              )}
+           </div>
         )}
       </main>
 
-      {/* --- Image Viewer Modal --- */}
-      {viewingImage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm animate-fade-in p-4" onClick={() => setViewingImage(null)}>
-           <button 
-             onClick={() => setViewingImage(null)} 
-             className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
-           >
-             <X size={24} />
-           </button>
-           <img 
-             src={viewingImage} 
-             alt="Chord Screenshot" 
-             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/10"
-             onClick={(e) => e.stopPropagation()} 
-           />
-        </div>
-      )}
-
       {/* --- Modals --- */}
-      <Modal isOpen={showAddParticipantModal} onClose={() => setShowAddParticipantModal(false)} title="Mark Arrival">
-         <div className="space-y-4">
+      
+      {/* Add Song Modal */}
+      <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? "Edit Song" : "Add Song"}>
+          <div className="space-y-4">
              <div>
-                <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">Who arrived?</label>
+               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Title</label>
+               <input 
+                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
+                 placeholder="e.g. Wonderwall"
+                 value={newSong.title}
+                 onChange={e => setNewSong({...newSong, title: e.target.value})}
+               />
+             </div>
+             
+             <div>
+               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Artist (Optional)</label>
+               <input 
+                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
+                 placeholder="e.g. Oasis"
+                 value={newSong.artist}
+                 onChange={e => setNewSong({...newSong, artist: e.target.value})}
+               />
+             </div>
+             
+             <div>
+               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Who is this for?</label>
+               <select 
+                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                 value={newSong.ownerId}
+                 onChange={e => setNewSong({...newSong, ownerId: e.target.value})}
+               >
+                 <option value="" disabled>Select Participant</option>
+                 {participants.map(p => (
+                   <option key={p.userId} value={p.userId}>{p.name}</option>
+                 ))}
+               </select>
+             </div>
+
+             <div className="border-t border-jam-700 pt-4">
+                <label className="block text-xs font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setNewSong({...newSong, chordType: 'link'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'link' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Link / Search</button>
+                  <button onClick={() => setNewSong({...newSong, chordType: 'screenshot'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Screenshot</button>
+                </div>
+
+                {newSong.chordType === 'link' && (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                       <input 
+                          className="flex-1 bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-sm" 
+                          placeholder="Paste URL or search..."
+                          value={newSong.link}
+                          onChange={e => setNewSong({...newSong, link: e.target.value})}
+                       />
+                       <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title}>
+                          {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <Search size={18} />}
+                       </Button>
+                    </div>
+
+                    {searchResults.length > 0 && (
+                      <div className="space-y-2 mt-2">
+                        {searchResults.map((result, idx) => (
+                           <div key={idx} onClick={() => selectSearchResult(result)} className="p-3 rounded-lg bg-jam-900 border border-jam-700 hover:border-orange-500 cursor-pointer transition-colors group flex items-center gap-3">
+                              <div className="flex-1">
+                                  <div className="font-bold text-sm text-white group-hover:text-orange-400">{result.title}</div>
+                                  <div className="text-[10px] text-jam-500 uppercase font-bold tracking-wider">{result.snippet}</div>
+                              </div>
+                              <button 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    window.open(result.url, '_blank');
+                                }}
+                                className="p-2 text-jam-400 hover:text-white hover:bg-jam-700 rounded-full transition-colors"
+                                title="Open in New Tab"
+                              >
+                                  <Eye size={18} />
+                              </button>
+                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {newSong.chordType === 'screenshot' && (
+                  <div className="h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50">
+                    {newSong.screenshot ? (
+                      <div className="relative w-full h-full p-2 flex items-center justify-center">
+                         <img src={newSong.screenshot} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />
+                         <button onClick={() => setNewSong({...newSong, screenshot: ''})} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full shadow-lg transition-colors">
+                           <Trash2 size={16} />
+                         </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={32} className="text-jam-500 mb-2" />
+                        <span className="text-sm text-jam-400">Tap to upload image</span>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      </>
+                    )}
+                  </div>
+                )}
+             </div>
+
+             <Button className="w-full py-3 mt-4" onClick={handleSaveSong} disabled={!isFormValid}>
+                {editingSongId ? 'Save Changes' : 'Add to Queue'}
+             </Button>
+          </div>
+      </Modal>
+
+      {/* Rating Modal */}
+      <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Rate this Performance">
+        <div className="text-center">
+           <h3 className="text-xl font-bold text-white mb-1">{showRatingModal?.title}</h3>
+           <p className="text-jam-400 mb-6">by {showRatingModal?.ownerName}</p>
+           
+           <div className="grid grid-cols-1 gap-3">
+             {RATING_OPTIONS.map(option => (
+               <button 
+                 key={option.value}
+                 onClick={() => submitRating(option.value)}
+                 className={`p-4 rounded-xl border border-jam-700 bg-jam-800 hover:bg-jam-700 transition-all flex items-center justify-center gap-3 group`}
+               >
+                 <span className={`text-lg font-bold ${option.color}`}>{option.label}</span>
+               </button>
+             ))}
+           </div>
+        </div>
+      </Modal>
+
+      {/* Add Participant Modal */}
+      <Modal isOpen={showAddParticipantModal} onClose={() => setShowAddParticipantModal(false)} title="Add Participant">
+          <div className="space-y-4">
+             <div>
+                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Name</label>
                 <select 
-                  className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white outline-none focus:border-orange-500"
-                  value={proxyUserToAdd}
-                  onChange={(e) => setProxyUserToAdd(e.target.value)}
+                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
+                    value={proxyUserToAdd}
+                    onChange={(e) => setProxyUserToAdd(e.target.value)}
                 >
-                    <option value="" disabled>Select a user...</option>
-                    {ALL_USERS.filter(u => !participants.find(p => p.userId === u.toLowerCase().replace(' ', '_'))).map(u => (
+                    <option value="" disabled>Select Name</option>
+                    {ALL_USERS.map(u => (
                         <option key={u} value={u}>{u}</option>
                     ))}
                 </select>
              </div>
              <div>
-                <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">When?</label>
+                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
                 <input 
-                  type="time"
-                  step="1"
-                  value={proxyArrivalTime} 
-                  onChange={(e) => setProxyArrivalTime(e.target.value)} 
-                  className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
+                    type="time" 
+                    step="1" 
+                    value={proxyArrivalTime} 
+                    onChange={(e) => setProxyArrivalTime(e.target.value)} 
+                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
                 />
              </div>
-             <Button onClick={confirmProxyParticipant} disabled={!proxyUserToAdd || !proxyArrivalTime} className="w-full mt-2">
-               Add Participant
-             </Button>
-         </div>
+             <Button className="w-full" onClick={confirmProxyParticipant} disabled={!proxyUserToAdd}>Add User</Button>
+          </div>
       </Modal>
 
-      <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? "Edit Song" : "Add Song"}>
-        <div className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">Song Title *</label>
-            <input 
-              className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-jam-600" 
-              value={newSong.title}
-              onChange={e => setNewSong({...newSong, title: e.target.value})}
-              placeholder="e.g. Wonderwall"
-            />
+      {/* Edit Participant Arrival Time Modal */}
+      <Modal isOpen={!!editingParticipant} onClose={() => setEditingParticipant(null)} title="Edit Arrival Time">
+          <div className="space-y-4">
+             <div className="text-center text-white font-bold text-lg mb-2">{editingParticipant?.name}</div>
+             <div>
+                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
+                <input 
+                    type="time" 
+                    step="1" 
+                    value={editArrivalTimeValue} 
+                    onChange={(e) => setEditArrivalTimeValue(e.target.value)} 
+                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-center text-xl" 
+                />
+             </div>
+             <div className="text-xs text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
+                Warning: Changing arrival time will immediately reshuffle the fair queue order.
+             </div>
+             <Button className="w-full" onClick={saveParticipantEdit}>Update Time</Button>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">Artist</label>
-            <input 
-              className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all placeholder-jam-600" 
-              value={newSong.artist}
-              onChange={e => setNewSong({...newSong, artist: e.target.value})}
-              placeholder="e.g. Oasis"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-jam-400 uppercase tracking-wider mb-1.5">Who is this for? *</label>
-            <select 
-               className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all appearance-none"
-               value={newSong.ownerId}
-               onChange={e => setNewSong({...newSong, ownerId: e.target.value})}
-            >
-              <option value="" className="text-jam-500">Select participant...</option>
-              {participants.map(p => <option key={p.id} value={p.userId}>{p.name}</option>)}
-            </select>
-          </div>
+      </Modal>
 
-          <div className="pt-4 border-t border-jam-700">
-            <label className="block text-sm font-bold text-jam-200 mb-3">Chords Source (Required)</label>
-            <div className="flex bg-jam-900 p-1 rounded-lg mb-4 border border-jam-700">
-              <button onClick={() => setNewSong({...newSong, chordType: 'link'})} className={`flex-1 py-2 text-xs font-bold uppercase rounded-md transition-all ${newSong.chordType === 'link' ? 'bg-jam-700 text-white shadow' : 'text-jam-400 hover:text-white'}`}>Link</button>
-              <button onClick={() => setNewSong({...newSong, chordType: 'auto_search'})} className={`flex-1 py-2 text-xs font-bold uppercase rounded-md transition-all ${newSong.chordType === 'auto_search' ? 'bg-jam-700 text-white shadow' : 'text-jam-400 hover:text-white'}`}>Search</button>
-              <button onClick={() => setNewSong({...newSong, chordType: 'screenshot'})} className={`flex-1 py-2 text-xs font-bold uppercase rounded-md transition-all ${newSong.chordType === 'screenshot' ? 'bg-jam-700 text-white shadow' : 'text-jam-400 hover:text-white'}`}>Image</button>
-            </div>
-
-            {newSong.chordType === 'link' && (
-              <input 
-                className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white text-sm focus:border-orange-500 outline-none placeholder-jam-600" 
-                placeholder="Paste URL here..."
-                value={newSong.link}
-                onChange={e => setNewSong({...newSong, link: e.target.value})}
-              />
-            )}
-
-            {newSong.chordType === 'screenshot' && (
-              <div className="h-64 bg-jam-900 border-2 border-jam-700 border-dashed rounded-xl text-center hover:border-orange-500/50 hover:bg-jam-800 transition-all relative flex items-center justify-center overflow-hidden">
-                 <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    id="chord-upload"
-                    onChange={handleImageUpload}
-                  />
-                 <label htmlFor="chord-upload" className="cursor-pointer w-full h-full flex flex-col items-center justify-center gap-3 text-jam-400 hover:text-white transition-colors p-4">
-                    {newSong.screenshot ? (
-                       <div className="relative group w-full h-full flex items-center justify-center">
-                         <img src={newSong.screenshot} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg border border-jam-700 shadow-lg" />
-                         <button 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                setNewSong({...newSong, screenshot: ''});
-                            }}
-                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100 z-10"
-                            title="Remove Image"
-                         >
-                            <Trash2 size={16} />
-                         </button>
-                       </div>
-                    ) : (
-                      <>
-                        <div className="p-3 bg-jam-800 rounded-full">
-                           <Upload size={24} className="text-jam-400" />
-                        </div>
-                        <span className="text-xs font-medium uppercase tracking-wide">Tap to upload chord screenshot</span>
-                      </>
-                    )}
-                 </label>
-              </div>
-            )}
-
-            {newSong.chordType === 'auto_search' && (
-               <div className="space-y-3">
-                 <div className="flex gap-2">
-                   <Button variant="secondary" className="w-full text-xs py-3" onClick={performSearch} disabled={isSearching || !newSong.title}>
-                      {isSearching ? 'Searching...' : 'Find Chords'} <Search size={14} />
-                   </Button>
-                 </div>
-                 {searchResults.length > 0 && (
-                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-jam-700">
-                      {searchResults.map((res, i) => (
-                        <div key={i} className="bg-jam-900 p-3 rounded-lg cursor-pointer hover:bg-jam-700 border border-jam-800 hover:border-orange-500/50 transition-all group" onClick={() => setNewSong({...newSong, link: res.url, chordType: 'link'})}>
-                           <div className="flex items-start justify-between">
-                              <div className="text-sm w-4/5">
-                                <div className="font-bold text-jam-200 group-hover:text-orange-400 transition-colors">{res.title}</div>
-                                <div className="text-xs text-orange-500/80 mb-1 mt-0.5 font-mono bg-orange-500/10 inline-block px-1 rounded">Starts: {res.snippet}</div>
-                                <div className="text-[10px] text-jam-500 truncate">{res.url}</div>
-                              </div>
-                              <div className="p-1 rounded-full bg-jam-800 text-jam-500 group-hover:text-white group-hover:bg-orange-500 transition-all">
-                                 <Plus size={14} />
-                              </div>
-                           </div>
-                        </div>
-                      ))}
-                   </div>
-                 )}
-               </div>
-            )}
-          </div>
-
-          <div className="flex justify-end pt-4">
-             <Button onClick={handleSaveSong} disabled={!isFormValid} className="w-full sm:w-auto">
-               {editingSongId ? 'Save Changes' : 'Add to Queue'}
-             </Button>
-          </div>
+      {/* Image Viewer Overlay */}
+      {viewingImage && (
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4" onClick={() => setViewingImage(null)}>
+           <button onClick={() => setViewingImage(null)} className="absolute top-4 right-4 text-white hover:text-orange-500 transition-colors">
+              <X size={32} />
+           </button>
+           <img src={viewingImage} alt="Chords" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
         </div>
-      </Modal>
-
-      {/* Rating Modal */}
-      <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Rate Song">
-         <div className="text-center">
-            <h3 className="text-2xl font-bold mb-2 text-white">{showRatingModal?.title}</h3>
-            <p className="text-jam-300 mb-8 text-sm uppercase tracking-widest">{showRatingModal?.artist} • {showRatingModal?.ownerName}</p>
-            
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {RATING_OPTIONS.map(opt => (
-                <button 
-                  key={opt.value}
-                  onClick={() => submitRating(opt.value)}
-                  className={`p-5 rounded-2xl border border-jam-700 bg-jam-800/50 hover:bg-jam-700 hover:border-jam-500 hover:-translate-y-1 transition-all flex flex-col items-center gap-3 group ${opt.color}`}
-                >
-                  <span className="text-2xl group-hover:scale-110 transition-transform block">{opt.label.split(' ')[0]}</span>
-                  <span className="font-bold text-sm">{opt.label.split(' ').slice(1).join(' ')}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setShowRatingModal(null)} className="text-jam-500 text-sm hover:text-white hover:underline transition-colors">Skip Rating</button>
-         </div>
-      </Modal>
+      )}
 
     </div>
   );
