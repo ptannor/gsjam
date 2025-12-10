@@ -9,14 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "*",
-    "react-dom": "*",
-    "@google/genai": "*",
-    "lucide-react": "*",
     "@dnd-kit/core": "*",
     "@dnd-kit/sortable": "*",
     "@dnd-kit/utilities": "*",
-    "firebase": "*"
+    "@google/genai": "*",
+    "@vercel/analytics": "^1.6.1",
+    "firebase": "*",
+    "lucide-react": "*",
+    "react": "*",
+    "react-dom": "*"
   },
   "devDependencies": {
     "@types/react": "*",
