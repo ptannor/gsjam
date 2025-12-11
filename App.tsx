@@ -313,6 +313,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<ChordSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false); // New state to track if search was performed
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // --- Initialization & Data Loading ---
 
@@ -598,6 +599,7 @@ export default function App() {
     });
     setSearchResults([]);
     setHasSearched(false);
+    setSearchError(null);
     setShowAddSong(true);
   };
 
@@ -614,6 +616,7 @@ export default function App() {
     });
     setSearchResults([]);
     setHasSearched(false);
+    setSearchError(null);
     setShowAddSong(true);
   };
 
@@ -672,8 +675,17 @@ export default function App() {
   const performSearch = async () => {
     setHasSearched(true);
     setIsSearching(true);
-    const results = await searchChords(newSong.title, newSong.artist);
-    setSearchResults(results);
+    setSearchError(null);
+    setSearchResults([]); // clear previous
+
+    const result = await searchChords(newSong.title, newSong.artist);
+    
+    if (result.success) {
+        setSearchResults(result.data);
+    } else {
+        setSearchError(result.error || "Unknown search error");
+    }
+    
     setIsSearching(false);
   };
 
@@ -1552,8 +1564,18 @@ export default function App() {
                        </Button>
                     </div>
                     
+                    {/* Error Message Display */}
+                    {searchError && (
+                      <div className="mt-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-center animate-fade-in">
+                         <div className="text-red-400 text-sm font-bold flex items-center justify-center gap-2">
+                             <ShieldAlert size={16} /> Search Failed
+                         </div>
+                         <div className="text-xs text-jam-400 mt-1">{searchError}</div>
+                      </div>
+                    )}
+                    
                     {/* No Results Message - IMPROVED UI */}
-                    {hasSearched && searchResults.length === 0 && !isSearching && (
+                    {hasSearched && !searchError && searchResults.length === 0 && !isSearching && (
                       <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 text-center">
                          <div className="text-orange-400 text-sm font-bold mb-1">No direct chords found automatically.</div>
                          <div className="text-xs text-jam-400 mb-2">We couldn't verify a deep link for this song.</div>

@@ -2,26 +2,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChordSearchResult } from "../types";
 
-// Safety check for process.env or import.meta.env (Vite)
-const getApiKey = () => {
-  // Check Vite env (for Vercel deployment)
-  if (typeof (import.meta as any) !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_KEY) {
-    return (import.meta as any).env.VITE_API_KEY;
-  }
-  
-  // Fallback for other environments
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    // Ignore error
-  }
-  return '';
-};
-
-const API_KEY = getApiKey();
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// Initialize the client with the API key from process.env.API_KEY as per guidelines.
+// Assume the environment variable is correctly configured and available.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Used for display labels
 const PREFERRED_DOMAINS = [
@@ -64,10 +47,22 @@ const getDomainDisplay = (url: string) => {
     }
 };
 
-export const searchChords = async (songTitle: string, artist: string): Promise<ChordSearchResult[]> => {
-  if (!API_KEY) {
-    console.warn("No API Key provided for chord search.");
-    return [];
+export interface SearchResponse {
+    success: boolean;
+    data: ChordSearchResult[];
+    error?: string;
+}
+
+export const searchChords = async (songTitle: string, artist: string): Promise<SearchResponse> => {
+  // Guidelines: API key availability is a hard requirement.
+  // We check process.env.API_KEY presence for safety, but initialization happens globally.
+  if (!process.env.API_KEY) {
+    console.warn("No API Key configured in process.env.API_KEY");
+    return { 
+        success: false, 
+        data: [], 
+        error: "Configuration Error: API_KEY is missing in environment variables." 
+    };
   }
 
   try {
@@ -130,10 +125,22 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
     }
 
     // Return the top 5 results directly from the search ranking.
-    return foundResults.slice(0, 5);
+    return { success: true, data: foundResults.slice(0, 5) };
 
-  } catch (e) {
+  } catch (e: any) {
     console.warn("Search failed", e);
-    return [];
+    
+    let errorMessage = "Failed to search chords. Please try again.";
+    const errStr = e.toString();
+
+    if (errStr.includes('429')) {
+        errorMessage = "Daily Search Quota Exceeded. The app is out of tokens for today.";
+    } else if (errStr.includes('403') || errStr.includes('400')) {
+        errorMessage = "API Key Invalid or API Not Enabled on Google Cloud.";
+    } else if (errStr.includes('500') || errStr.includes('503')) {
+        errorMessage = "Google AI Service is temporarily busy. Try again in a moment.";
+    }
+
+    return { success: false, data: [], error: errorMessage };
   }
 };
