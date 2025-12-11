@@ -22,7 +22,7 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive
+  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive, Link as LinkIcon
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -308,7 +308,7 @@ export default function App() {
 
   const [newSong, setNewSong] = useState({ 
     title: '', artist: '', ownerId: '', 
-    chordType: 'link', link: '', screenshot: '', searchTerm: '' 
+    chordType: 'auto_search', link: '', screenshot: '', searchTerm: '' 
   });
   const [searchResults, setSearchResults] = useState<ChordSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -596,7 +596,7 @@ export default function App() {
     setEditingSongId(null);
     setNewSong({ 
       title: '', artist: '', ownerId: currentUser?.id || '', 
-      chordType: 'link', link: '', screenshot: '', searchTerm: '' 
+      chordType: 'auto_search', link: '', screenshot: '', searchTerm: '' 
     });
     setSearchResults([]);
     setHasSearched(false);
@@ -611,7 +611,7 @@ export default function App() {
       title: song.title,
       artist: song.artist,
       ownerId: song.ownerUserId,
-      chordType: song.chordSourceType === 'auto_search' ? 'link' : song.chordSourceType,
+      chordType: song.chordSourceType,
       link: song.chordLink || '',
       screenshot: song.chordScreenshotUrl || '',
       searchTerm: ''
@@ -1576,25 +1576,39 @@ export default function App() {
 
              <div className="border-t border-jam-700 pt-4">
                 <label className="block text-xs font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
-                <div className="flex gap-2 mb-4">
-                  <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'link' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Link / Search</button>
-                  <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Screenshot</button>
+                <div className="flex gap-2 mb-4 p-1 bg-jam-900 rounded-xl border border-jam-700">
+                  <button onClick={() => { setNewSong({...newSong, chordType: 'auto_search'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'auto_search' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
+                    <Sparkles size={14} /> AI Search
+                  </button>
+                  <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'link' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
+                    <LinkIcon size={14} /> Paste Link
+                  </button>
+                  <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
+                    <ImageIcon size={14} /> Image
+                  </button>
                 </div>
 
-                {newSong.chordType === 'link' && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                       <input 
-                          className="flex-1 bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-sm" 
-                          placeholder="Paste URL or search..."
-                          value={newSong.link}
-                          onChange={e => setNewSong({...newSong, link: e.target.value})}
-                       />
-                       <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title}>
-                          {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <Search size={18} />}
-                       </Button>
+                {newSong.chordType === 'auto_search' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 text-center">
+                        <p className="text-sm text-jam-300 mb-3">We'll find the best chord versions from Ultimate Guitar, Tab4u, and more.</p>
+                        <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title} className="w-full">
+                            {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <><Search size={16} /> Find Chords</>}
+                        </Button>
                     </div>
-                    
+
+                    {/* Selected Link Preview */}
+                    {newSong.link && (
+                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-3">
+                             <div className="p-2 bg-green-500/20 rounded-full text-green-400"><CheckCircle size={16} /></div>
+                             <div className="flex-1 min-w-0">
+                                 <div className="text-xs font-bold text-green-400 uppercase tracking-wider">Selected</div>
+                                 <div className="text-sm text-white truncate underline decoration-green-500/50">{newSong.link}</div>
+                             </div>
+                             <button onClick={() => window.open(newSong.link, '_blank')} className="text-jam-400 hover:text-white"><ExternalLink size={14} /></button>
+                         </div>
+                    )}
+
                     {/* Error Message Display */}
                     {searchError && (
                       <div className="mt-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-center animate-fade-in">
@@ -1615,7 +1629,7 @@ export default function App() {
                       </div>
                     )}
                     
-                    {/* No Results Message - IMPROVED UI */}
+                    {/* No Results Message */}
                     {hasSearched && !searchError && searchResults.length === 0 && !isSearching && (
                       <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 text-center">
                          <div className="text-orange-400 text-sm font-bold mb-1">No direct chords found automatically.</div>
@@ -1632,9 +1646,9 @@ export default function App() {
                     {searchResults.length > 0 && (
                       <div className="space-y-2 mt-2">
                         {searchResults.map((result, idx) => (
-                           <div key={idx} onClick={() => selectSearchResult(result)} className="p-3 rounded-lg bg-jam-900 border border-jam-700 hover:border-orange-500 cursor-pointer transition-colors group flex items-center gap-3">
+                           <div key={idx} onClick={() => selectSearchResult(result)} className={`p-3 rounded-lg border cursor-pointer transition-colors group flex items-center gap-3 ${newSong.link === result.url ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-900 border-jam-700 hover:border-jam-500'}`}>
                               <div className="flex-1">
-                                  <div className="font-bold text-sm text-white group-hover:text-orange-400">{result.title}</div>
+                                  <div className={`font-bold text-sm ${newSong.link === result.url ? 'text-orange-400' : 'text-white'}`}>{result.title}</div>
                                   <div className="text-[10px] text-jam-500 uppercase font-bold tracking-wider">{result.snippet}</div>
                               </div>
                               <button 
@@ -1654,8 +1668,23 @@ export default function App() {
                   </div>
                 )}
 
+                {newSong.chordType === 'link' && (
+                  <div className="animate-fade-in">
+                      <div className="bg-jam-900 p-1 rounded-xl border border-jam-700 focus-within:border-orange-500 transition-colors flex items-center">
+                          <div className="p-3 text-jam-500"><LinkIcon size={18} /></div>
+                          <input 
+                              className="flex-1 bg-transparent p-3 pl-0 text-white outline-none text-sm font-mono placeholder-jam-600"
+                              placeholder="https://tabs.ultimate-guitar.com/tab/..."
+                              value={newSong.link}
+                              onChange={e => setNewSong({...newSong, link: e.target.value})}
+                          />
+                      </div>
+                      <p className="text-xs text-jam-500 mt-2 pl-1">Paste a direct link to the chords page.</p>
+                  </div>
+                )}
+
                 {newSong.chordType === 'screenshot' && (
-                  <div className="h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50">
+                  <div className="h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50 animate-fade-in">
                     {newSong.screenshot ? (
                       <div className="relative w-full h-full p-2 flex items-center justify-center">
                          <img src={newSong.screenshot} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />

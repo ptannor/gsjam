@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import * as firebaseApp from 'firebase/app';
 import { getDatabase, ref, set, push, onValue, remove, update, get, child } from 'firebase/database';
 
 // We store the app instance and db instance
@@ -21,8 +21,9 @@ export const initFirebase = (config: any) => {
         // prevent double init
         if (app) return true;
         
-        // Use the named import to access initializeApp
-        app = initializeApp(config);
+        // Use the namespace import to access initializeApp
+        // Explicitly cast to any to avoid TS errors if type definitions are mismatched
+        app = (firebaseApp as any).initializeApp(config);
         db = getDatabase(app);
         console.log("Firebase connected successfully.");
         return true;
