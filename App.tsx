@@ -771,8 +771,8 @@ export default function App() {
       .sort((a,b) => (a.playedAt || 0) - (b.playedAt || 0)); 
     
     return played.map(s => {
-      const score = calculateSongScore(s.id, activeStatsRatings);
-      return { ...s, score };
+      const stats = calculateSongScore(s.id, activeStatsRatings);
+      return { ...s, score: stats ? stats.score : 0 };
     });
   }, [activeStatsSongs, activeStatsRatings]);
 
