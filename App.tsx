@@ -90,7 +90,15 @@ const getDomain = (url?: string, title?: string) => {
 
 // --- Utility Components ---
 
-const Modal = ({ isOpen, onClose, children, title, size = 'md' }: { isOpen: boolean; onClose: () => void; children: React.ReactNode; title: string, size?: 'md' | 'lg' | 'xl' }) => {
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children?: React.ReactNode;
+  title: string;
+  size?: 'md' | 'lg' | 'xl';
+}
+
+const Modal = ({ isOpen, onClose, children, title, size = 'md' }: ModalProps) => {
   if (!isOpen) return null;
   
   const sizeClasses = {
@@ -129,15 +137,24 @@ const Button = ({ onClick, children, variant = 'primary', className = '', disabl
 
 // --- Sortable Item Component ---
 
-function SortableSongItem({ 
-  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage, onRate
-}: { 
-  song: SongChoice; index: number; participant?: JamParticipant; 
-  onMarkPlaying?: () => void; onMarkPlayed?: () => void; onDelete?: () => void; onRevive?: () => void; onEdit?: () => void; onUnsteal?: () => void;
+interface SortableSongItemProps {
+  song: SongChoice;
+  index: number;
+  participant?: JamParticipant;
+  onMarkPlaying?: () => void;
+  onMarkPlayed?: () => void;
+  onDelete?: () => void;
+  onRevive?: () => void;
+  onEdit?: () => void;
+  onUnsteal?: () => void;
   isCurrent: boolean;
   onViewImage?: (url: string) => void;
   onRate?: () => void;
-}) {
+}
+
+const SortableSongItem: React.FC<SortableSongItemProps> = ({ 
+  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage, onRate
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: song.id });
   
   const style = {
@@ -242,7 +259,7 @@ function SortableSongItem({
       </div>
     </div>
   );
-}
+};
 
 // --- Main App ---
 
@@ -295,6 +312,7 @@ export default function App() {
   });
   const [searchResults, setSearchResults] = useState<ChordSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false); // New state to track if search was performed
 
   // --- Initialization & Data Loading ---
 
@@ -528,6 +546,7 @@ export default function App() {
       chordType: 'link', link: '', screenshot: '', searchTerm: '' 
     });
     setSearchResults([]);
+    setHasSearched(false);
     setShowAddSong(true);
   };
 
@@ -543,6 +562,7 @@ export default function App() {
       searchTerm: ''
     });
     setSearchResults([]);
+    setHasSearched(false);
     setShowAddSong(true);
   };
 
@@ -599,6 +619,7 @@ export default function App() {
   };
 
   const performSearch = async () => {
+    setHasSearched(true);
     setIsSearching(true);
     const results = await searchChords(newSong.title, newSong.artist);
     setSearchResults(results);
@@ -993,7 +1014,7 @@ export default function App() {
                           onDelete={() => deleteSong(song.id)}
                           onEdit={() => openEditModal(song)}
                           onUnsteal={() => unstealSong(song.id)}
-                          onViewImage={setViewingImage}
+                          onViewImage={(url) => setViewingImage(url)}
                         />
                       ))
                    )}
@@ -1021,7 +1042,7 @@ export default function App() {
                                   index={index}
                                   isCurrent={false}
                                   onRevive={() => reviveSong(song.id)}
-                                  onViewImage={setViewingImage}
+                                  onViewImage={(url) => setViewingImage(url)}
                                   // Show rate button if logged in and not rated
                                   onRate={(!hasRated && currentUser) ? () => setShowRatingModal(song) : undefined}
                                />
@@ -1346,7 +1367,10 @@ export default function App() {
                  className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
                  placeholder="e.g. Wonderwall"
                  value={newSong.title}
-                 onChange={e => setNewSong({...newSong, title: e.target.value})}
+                 onChange={e => {
+                     setNewSong({...newSong, title: e.target.value});
+                     setHasSearched(false);
+                 }}
                />
              </div>
              
@@ -1356,7 +1380,10 @@ export default function App() {
                  className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
                  placeholder="e.g. Oasis"
                  value={newSong.artist}
-                 onChange={e => setNewSong({...newSong, artist: e.target.value})}
+                 onChange={e => {
+                     setNewSong({...newSong, artist: e.target.value});
+                     setHasSearched(false);
+                 }}
                />
              </div>
              
@@ -1377,8 +1404,8 @@ export default function App() {
              <div className="border-t border-jam-700 pt-4">
                 <label className="block text-xs font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
                 <div className="flex gap-2 mb-4">
-                  <button onClick={() => setNewSong({...newSong, chordType: 'link'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'link' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Link / Search</button>
-                  <button onClick={() => setNewSong({...newSong, chordType: 'screenshot'})} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Screenshot</button>
+                  <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'link' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Link / Search</button>
+                  <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2 rounded-lg text-sm font-medium ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white' : 'bg-jam-700 text-jam-400'}`}>Screenshot</button>
                 </div>
 
                 {newSong.chordType === 'link' && (
@@ -1394,6 +1421,20 @@ export default function App() {
                           {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <Search size={18} />}
                        </Button>
                     </div>
+                    
+                    {/* No Results Message - IMPROVED UI */}
+                    {hasSearched && searchResults.length === 0 && !isSearching && (
+                      <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 text-center">
+                         <div className="text-orange-400 text-sm font-bold mb-1">No direct chords found automatically.</div>
+                         <div className="text-xs text-jam-400 mb-2">We couldn't verify a deep link for this song.</div>
+                         <button 
+                            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(newSong.title + " " + newSong.artist + " chords ultimate-guitar tab4u negina nagenu")}`, '_blank')}
+                            className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
+                         >
+                            <Search size={12} /> Search Manually on Google
+                         </button>
+                      </div>
+                    )}
 
                     {searchResults.length > 0 && (
                       <div className="space-y-2 mt-2">

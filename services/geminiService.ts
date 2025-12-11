@@ -23,92 +23,44 @@ const getApiKey = () => {
 const API_KEY = getApiKey();
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-// Check if a URL belongs to the target domain AND is likely a content page (not homepage/login)
-const isValidResultForDomain = (url: string, targetDomain: string): boolean => {
-    const lower = url.toLowerCase();
-    
-    // Domain Check
-    let domainMatch = false;
-    if (targetDomain === 'International') {
-        domainMatch = lower.includes('ultimate-guitar.com');
-    }
-    else if (targetDomain === 'Israeli') {
-        domainMatch = lower.includes('tab4u.com') || lower.includes('negina.co.il') || lower.includes('nagnu.co.il');
-    }
-    else {
-        domainMatch = true; 
-    }
+// Used for display labels
+const PREFERRED_DOMAINS = [
+    'ultimate-guitar.com',
+    'tab4u.com',
+    'negina.co.il',
+    'nagnu.co.il',
+    'nagenu.co.il', // Added user spelling variant
+    'songsterr.com',
+    'chordu.com'
+];
 
-    if (!domainMatch) return false;
+// Block list for non-chord content
+const BLOCKED_DOMAINS = [
+    'youtube.com', 'youtu.be',
+    'spotify.com', 'open.spotify.com',
+    'apple.com', 'music.apple.com',
+    'amazon.com',
+    'facebook.com',
+    'instagram.com',
+    'wikipedia.org',
+    // 'google.com' - Explicitly allowing google to pass through logic to be filtered by parameter checks if needed, 
+    // though usually google.com/search is not a direct chord result.
+];
 
-    // Content Check (Filter out junk)
-    if (lower.includes('login') || lower.includes('signup') || lower.includes('account') || lower.includes('reset') || lower.includes('search')) {
-        return false;
-    }
-
-    return true;
-};
-
-const performBatchSearch = async (
-    songTitle: string, 
-    artist: string, 
-    query: string, 
-    batchName: string
-): Promise<ChordSearchResult[]> => {
+const getDomainDisplay = (url: string) => {
     try {
-        const prompt = `Find specific guitar chords for "${songTitle}" by "${artist}". Query: ${query}`;
+        const lower = url.toLowerCase();
+        if (lower.includes('tab4u')) return 'Tab4u';
+        if (lower.includes('ultimate-guitar')) return 'Ultimate Guitar';
+        if (lower.includes('negina') || lower.includes('nagnu') || lower.includes('nagenu')) return 'Negina/Nagnu';
+        if (lower.includes('songsterr')) return 'Songsterr';
+        if (lower.includes('e-chords')) return 'E-Chords';
+        if (lower.includes('azchords')) return 'AZChords';
         
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                tools: [{ googleSearch: {} }],
-            },
-        });
-
-        const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-        const textOutput = response.text || "";
-        
-        const foundResults: ChordSearchResult[] = [];
-        const seenUrls = new Set<string>();
-
-        // 1. Extract from Grounding Metadata (Verified Links)
-        for (const chunk of chunks) {
-            if (chunk.web?.uri && chunk.web?.title) {
-                const url = chunk.web.uri;
-                if (isValidResultForDomain(url, batchName) && !seenUrls.has(url)) {
-                    foundResults.push({
-                        title: chunk.web.title,
-                        url: url,
-                        snippet: getDomainFromUrl(url) // Clean source name
-                    });
-                    seenUrls.add(url);
-                }
-            }
-        }
-
-        // 2. Extract from Text (Fallback)
-        const urlRegex = /(https?:\/\/[^\s)\]]+)/g;
-        const textMatches = textOutput.match(urlRegex);
-
-        if (textMatches) {
-            for (const url of textMatches) {
-                let cleanUrl = url.replace(/[.,;)]$/, '');
-                if (isValidResultForDomain(cleanUrl, batchName) && !seenUrls.has(cleanUrl)) {
-                    foundResults.push({
-                        title: `${songTitle} - ${getDomainFromUrl(cleanUrl)}`,
-                        url: cleanUrl,
-                        snippet: getDomainFromUrl(cleanUrl)
-                    });
-                    seenUrls.add(cleanUrl);
-                }
-            }
-        }
-
-        return foundResults;
-    } catch (e) {
-        console.warn(`Search failed for ${batchName}`, e);
-        return [];
+        const hostname = new URL(url).hostname;
+        return hostname.replace('www.', '').replace('tabs.', '').split('.')[0];
+    } catch {
+        return 'Link';
     }
 };
 
@@ -118,65 +70,70 @@ export const searchChords = async (songTitle: string, artist: string): Promise<C
     return [];
   }
 
-  // OPTIMIZATION: 2 Batches for the "Big 4" Sites
-  // Batch 1: Ultimate Guitar
-  // Batch 2: Israeli Sites (Tab4u, Negina, Nagnu)
-  
-  const searchPromises = [
-      performBatchSearch(
-          songTitle, 
-          artist, 
-          `"${songTitle}" "${artist}" chords site:ultimate-guitar.com`, 
-          "International"
-      ),
-      performBatchSearch(
-          songTitle, 
-          artist, 
-          `"${songTitle}" "${artist}" אקורדים (site:tab4u.com OR site:negina.co.il OR site:nagnu.co.il)`, 
-          "Israeli"
-      )
-  ];
+  try {
+    // STRATEGY: Strict adherence to user template.
+    // Template: [Song] [Artist] "chords ultimate-guitar tab4u negina nagenu"
+    const fixedSuffix = "chords ultimate-guitar tab4u negina nagenu";
+    const query = `${songTitle.trim()} ${artist.trim()} ${fixedSuffix}`;
+    
+    console.log("GS Jam Search Query:", query);
 
-  const resultsArrays = await Promise.all(searchPromises);
-  const flatResults = resultsArrays.flat();
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `Search on Google for: ${query}`, // Explicit instruction to search
+        config: {
+            tools: [{ googleSearch: {} }],
+        },
+    });
 
-  // Deduplicate and Sort
-  const uniqueUrls = new Set<string>();
-  const allResults: ChordSearchResult[] = [];
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    console.log("GS Jam Search Raw Results:", chunks.length);
+    
+    const seenUrls = new Set<string>();
+    const foundResults: ChordSearchResult[] = [];
 
-  // Sort Logic: Priority Order
-  flatResults.sort((a, b) => {
-      const getScore = (r: ChordSearchResult) => {
-          const u = r.url.toLowerCase();
-          if (u.includes('tab4u.com')) return 10;
-          if (u.includes('negina.co.il') || u.includes('nagnu.co.il')) return 9;
-          if (u.includes('ultimate-guitar.com')) return 8;
-          return 1;
-      };
-      return getScore(b) - getScore(a);
-  });
+    // Extract verified links from Grounding Metadata
+    for (const chunk of chunks) {
+        if (chunk.web?.uri && chunk.web?.title) {
+            let url = chunk.web.uri;
+            const title = chunk.web.title;
+            const lower = url.toLowerCase();
 
-  for (const res of flatResults) {
-      if (!uniqueUrls.has(res.url)) {
-          // Improve snippet display
-          const u = res.url.toLowerCase();
-          if (u.includes('tab4u')) res.snippet = 'Tab4u';
-          else if (u.includes('ultimate-guitar')) res.snippet = 'Ultimate Guitar';
-          else if (u.includes('negina') || u.includes('nagnu')) res.snippet = 'Negina/Nagnu';
-          else res.snippet = getDomainFromUrl(res.url);
+            // 1. Basic Junk Filter
+            if (BLOCKED_DOMAINS.some(d => lower.includes(d))) continue;
+            
+            // 2. Google Internal Links Filter
+            // We want real sites, not the Google redirector or search result page itself
+            if (lower.includes('google.com/search') || lower.includes('google.com/url')) {
+                 continue; 
+            }
+            if (!lower.startsWith('http')) continue;
 
-          allResults.push(res);
-          uniqueUrls.add(res.url);
-      }
-  }
+            // 3. Loop Prevention
+            // Block explicit internal search pages of the target sites if possible, 
+            // but be careful not to block valid song pages with query params.
+            if (lower.includes('search.php') || (lower.includes('/search/') && !lower.includes('vertex'))) {
+                continue;
+            }
 
-  return allResults.slice(0, 10);
-};
+            // 4. Deduplicate
+            const cleanUrl = url.trim().replace(/\/$/, '');
+            if (seenUrls.has(cleanUrl)) continue;
 
-function getDomainFromUrl(url: string) {
-    try {
-        return new URL(url).hostname.replace('www.', '').replace('tabs.', '');
-    } catch {
-        return 'Web Result';
+            foundResults.push({
+                title: title,
+                url: url,
+                snippet: getDomainDisplay(url)
+            });
+            seenUrls.add(cleanUrl);
+        }
     }
-}
+
+    // Return the top 5 results directly from the search ranking.
+    return foundResults.slice(0, 5);
+
+  } catch (e) {
+    console.warn("Search failed", e);
+    return [];
+  }
+};
