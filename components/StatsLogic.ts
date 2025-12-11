@@ -23,6 +23,13 @@ export interface UserSimilarity {
   commonSongs: number;
 }
 
+export interface SessionSummary {
+  totalSongs: number;
+  totalDurationMin: number; // Estimate
+  vibeScore: number; // Avg of all ratings
+  topContributor: string;
+}
+
 // --- Helpers ---
 
 const getRatingValue = (r: Rating['value']): number => {
@@ -36,6 +43,48 @@ const getRatingValue = (r: Rating['value']): number => {
 };
 
 // --- Core Logic ---
+
+export const getSessionSummary = (songs: SongChoice[], ratings: Rating[]): SessionSummary => {
+  const played = songs.filter(s => s.playStatus === 'played');
+  if (played.length === 0) return { totalSongs: 0, totalDurationMin: 0, vibeScore: 0, topContributor: '-' };
+
+  // Calculate Average Vibe
+  let totalRatingVal = 0;
+  let ratingCount = 0;
+  
+  // Only count ratings for songs in this session
+  const sessionSongIds = new Set(played.map(s => s.id));
+  const sessionRatings = ratings.filter(r => sessionSongIds.has(r.songChoiceId));
+
+  sessionRatings.forEach(r => {
+    totalRatingVal += getRatingValue(r.value);
+    ratingCount++;
+  });
+
+  const vibeScore = ratingCount > 0 ? Math.round(totalRatingVal / ratingCount) : 0;
+
+  // Find Top Contributor (Most songs played)
+  const counts: Record<string, number> = {};
+  played.forEach(s => {
+    counts[s.ownerName] = (counts[s.ownerName] || 0) + 1;
+  });
+  
+  let topContributor = '-';
+  let maxCount = 0;
+  Object.entries(counts).forEach(([name, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      topContributor = name;
+    }
+  });
+
+  return {
+    totalSongs: played.length,
+    totalDurationMin: played.length * 4, // Approx 4 mins per song
+    vibeScore,
+    topContributor
+  };
+};
 
 /**
  * Calculates a normalized score for a song based on all ratings provided.
@@ -108,7 +157,7 @@ export const getLeaderboard = (
 export const calculateTasteSimilarity = (
   allRatings: Rating[], 
   participants: JamParticipant[]
-): UserSimilarity[] => {
+): { soulmates: UserSimilarity[], opposites: UserSimilarity[] } => {
   const activeUserIds = Array.from(new Set(allRatings.map(r => r.userId)));
   const pairs: UserSimilarity[] = [];
 
@@ -150,7 +199,10 @@ export const calculateTasteSimilarity = (
     }
   }
 
-  return pairs.sort((a, b) => b.score - a.score);
+  const soulmates = [...pairs].sort((a, b) => b.score - a.score);
+  const opposites = [...pairs].sort((a, b) => a.score - b.score);
+
+  return { soulmates, opposites };
 };
 
 export const getCrowdPleasers = (songs: SongChoice[], ratings: Rating[]) => {

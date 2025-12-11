@@ -22,14 +22,14 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap
+  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
 import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
-import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, ScoredSong } from './components/StatsLogic';
+import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong } from './components/StatsLogic';
 import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, push, remove } from './services/firebase';
 
 // --- Utility Functions ---
@@ -757,6 +757,8 @@ export default function App() {
 
   const { participants: activeStatsParticipants, songs: activeStatsSongs, ratings: activeStatsRatings } = statsDataset;
 
+  const sessionSummary = useMemo(() => getSessionSummary(activeStatsSongs, activeStatsRatings), [activeStatsSongs, activeStatsRatings]);
+
   const arrivalTimeline = useMemo(() => {
     return [...activeStatsParticipants].sort((a,b) => a.arrivalTime - b.arrivalTime);
   }, [activeStatsParticipants]);
@@ -782,15 +784,12 @@ export default function App() {
     return getCrowdPleasers(songs, ratings);
   }, [songs, ratings]);
 
-  const tasteSimilarity = useMemo(() => {
+  const tasteData = useMemo(() => {
     return calculateTasteSimilarity(ratings, participants);
   }, [ratings, participants]);
 
   const activeQueue = queueIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as SongChoice[];
   
-  // NEW: Played Songs list for main view (sorted newest played LAST, essentially chronologically or reverse?)
-  // Usually for a log you want newest played at top, or bottom? User requested "played songs list in order".
-  // Let's do chronological (Song 1, Song 2...)
   const playedSongsList = songs
     .filter(s => s.playStatus === 'played')
     .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
@@ -1058,7 +1057,7 @@ export default function App() {
            <div className="max-w-4xl mx-auto pb-40">
               <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
                  {[
-                   { id: 'today', label: 'Today', icon: Activity },
+                   { id: 'today', label: 'Session Dashboard', icon: Activity },
                    { id: 'history', label: 'History', icon: History },
                    { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
                    { id: 'taste', label: 'Taste Buds', icon: Heart },
@@ -1066,7 +1065,7 @@ export default function App() {
                     <button 
                       key={tab.id}
                       onClick={() => setStatsTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${statsTab === tab.id ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400 hover:bg-jam-700'}`}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${statsTab === tab.id ? 'bg-orange-600 border-orange-500 text-white shadow-lg' : 'bg-jam-800 border-jam-700 text-jam-400 hover:bg-jam-700 hover:text-white'}`}
                     >
                       <tab.icon size={16} /> {tab.label}
                     </button>
@@ -1075,32 +1074,55 @@ export default function App() {
 
               {statsTab === 'today' && (
                  <div className="animate-fade-in space-y-8">
-                    {/* Top Rated Section */}
-                    {leaderboard.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                    
+                    {/* Session Pulse Dashboard - NEW */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
+                           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Music size={64} /></div>
+                           <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Total Songs</div>
+                           <div className="text-3xl font-bold text-white">{sessionSummary.totalSongs}</div>
+                           <div className="text-xs text-jam-500 mt-2">~{sessionSummary.totalDurationMin} mins played</div>
+                       </div>
+
+                       <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
+                           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Flame size={64} className="text-orange-500"/></div>
+                           <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Session Vibe</div>
+                           <div className="flex items-end gap-2">
+                               <div className="text-3xl font-bold text-white">{sessionSummary.vibeScore}</div>
+                               <div className="text-sm font-bold text-jam-500 mb-1">/ 100</div>
+                           </div>
+                           <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden">
+                               <div className={`h-full rounded-full transition-all duration-1000 ${sessionSummary.vibeScore > 80 ? 'bg-green-500' : sessionSummary.vibeScore > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width: `${sessionSummary.vibeScore}%`}}></div>
+                           </div>
+                       </div>
+
+                       <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
+                           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Mic2 size={64} className="text-blue-500"/></div>
+                           <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">MVP</div>
+                           <div className="text-xl font-bold text-white truncate">{sessionSummary.topContributor}</div>
+                           <div className="text-xs text-jam-500 mt-2">Most songs played tonight</div>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Top Rated Section */}
+                        {leaderboard.length > 0 && (
+                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6 backdrop-blur-sm">
                                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <Trophy className="text-green-400" size={20} /> Crowd Favorites
+                                    <Sparkles className="text-yellow-400" size={20} /> Crowd Favorites
                                 </h3>
-                                <div className="space-y-5">
+                                <div className="space-y-4">
                                     {leaderboard.slice(0, 5).map((item, idx) => (
-                                        <div key={item.song.id} className="relative">
+                                        <div key={item.song.id} className={`relative p-4 rounded-xl border ${idx === 0 ? 'bg-gradient-to-r from-jam-800 to-jam-700 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 'bg-jam-900/50 border-jam-800'}`}>
                                             <div className="flex items-center gap-4">
-                                                <div className="text-2xl font-bold text-jam-600 w-6">#{idx + 1}</div>
-                                                <div className="flex-1">
-                                                    <div className="font-bold text-white">{item.song.title}</div>
-                                                    <div className="text-xs text-jam-400">{item.song.ownerName}</div>
-                                                    
-                                                    {/* Vote Breakdown Visuals */}
-                                                    <div className="flex gap-1 mt-1.5">
-                                                        {Array.from({length: item.breakdown.highlight}).map((_, i) => <div key={`h-${i}`} className="w-2 h-2 rounded-full bg-green-400"></div>)}
-                                                        {Array.from({length: item.breakdown.sababa}).map((_, i) => <div key={`s-${i}`} className="w-2 h-2 rounded-full bg-yellow-400"></div>)}
-                                                        {Array.from({length: item.breakdown.ok}).map((_, i) => <div key={`o-${i}`} className="w-2 h-2 rounded-full bg-gray-600"></div>)}
-                                                    </div>
+                                                <div className={`text-xl font-bold w-6 text-center ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-orange-700' : 'text-jam-600'}`}>#{idx + 1}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-bold text-white text-sm truncate">{item.song.title}</div>
+                                                    <div className="text-xs text-jam-400 truncate">{item.song.ownerName}</div>
                                                 </div>
                                                 
-                                                {/* Donut Chart - Updated Colors for Highlight(Green) and Sababa(Yellow) */}
-                                                <div className="relative w-12 h-12 rounded-full flex items-center justify-center bg-jam-800"
+                                                {/* Donut Chart */}
+                                                <div className="relative w-10 h-10 rounded-full flex items-center justify-center bg-jam-800 shrink-0"
                                                     style={{
                                                         background: `conic-gradient(
                                                             #4ade80 0% ${(item.breakdown.highlight / item.totalVotes) * 100}%,
@@ -1109,133 +1131,130 @@ export default function App() {
                                                         )`
                                                     }}
                                                 >
-                                                    <div className="absolute inset-2 bg-jam-800 rounded-full"></div>
+                                                    <div className="absolute inset-1.5 bg-jam-800 rounded-full flex items-center justify-center">
+                                                        <span className="text-[9px] font-bold text-white">{item.score}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            
-                                            {/* Who voted what */}
-                                            <div className="mt-2 text-[10px] text-jam-500 pl-10">
-                                                {activeStatsRatings.filter(r => r.songChoiceId === item.song.id && (r.value === 'Highlight' || r.value === 'Sababa')).map(r => {
-                                                    const voterName = participants.find(p => p.userId === r.userId)?.name.split(' ')[0];
-                                                    return (
-                                                        <span key={r.id} className={`inline-block mr-2 ${r.value === 'Highlight' ? 'text-green-400' : 'text-yellow-400'}`}>
-                                                            {voterName}
-                                                        </span>
-                                                    );
-                                                })}
-                                            </div>
+                                            {/* Detailed bars for top song only */}
+                                            {idx === 0 && (
+                                                <div className="mt-3 flex gap-1 h-1.5 w-full rounded-full overflow-hidden opacity-80">
+                                                    {item.breakdown.highlight > 0 && <div style={{flex: item.breakdown.highlight}} className="bg-green-400" title="Highlight"></div>}
+                                                    {item.breakdown.sababa > 0 && <div style={{flex: item.breakdown.sababa}} className="bg-yellow-400" title="Sababa"></div>}
+                                                    {item.breakdown.ok > 0 && <div style={{flex: item.breakdown.ok}} className="bg-gray-600" title="No Comment"></div>}
+                                                    {item.breakdown.bad > 0 && <div style={{flex: item.breakdown.bad}} className="bg-red-500" title="Needs Work"></div>}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            
-                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <Clock className="text-blue-400" size={20} /> Session Log
-                                </h3>
-                                <div className="relative border-l-2 border-jam-700 ml-3 space-y-6">
-                                    {arrivalTimeline.map((p, i) => (
-                                        <div key={p.id} className="relative pl-6">
-                                            <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-jam-900 border-2 border-blue-500"></div>
-                                            <div className="text-sm font-bold text-white">{p.name} arrived</div>
-                                            <div className="text-xs text-jam-500">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                        )}
+                        
+                        <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6 backdrop-blur-sm">
+                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                <TrendingUp className="text-blue-400" size={20} /> Timeline
+                            </h3>
+                            <div className="relative ml-2 space-y-6 before:absolute before:inset-0 before:ml-2.5 before:w-0.5 before:-translate-x-1/2 before:bg-gradient-to-b before:from-blue-500 before:to-jam-800 before:h-full">
+                                {arrivalTimeline.map((p, i) => (
+                                    <div key={p.id} className="relative pl-8 group">
+                                        <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-blue-500 bg-jam-950 flex items-center justify-center z-10">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:animate-ping"></div>
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{p.name} joined</div>
+                                        <div className="text-xs text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                ))}
+                                {sessionDigest.map((s, i) => (
+                                    <div key={'s'+s.id} className="relative pl-8 group">
+                                        <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-jam-600 bg-jam-950 flex items-center justify-center z-10">
+                                            <Music size={10} className="text-jam-400" />
+                                        </div>
+                                        <div className="text-sm font-medium text-jam-200">
+                                            <span className="font-bold text-white">{s.title}</span> <span className="text-jam-500">by</span> {s.ownerName}
+                                        </div>
+                                        <div className="text-xs text-jam-500 font-mono mt-0.5">
+                                            {s.playedAt ? new Date(s.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''} 
+                                            {s.score > 0 && <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${s.score >= 90 ? 'bg-green-500/20 text-green-400' : 'bg-jam-700 text-jam-400'}`}>{s.score} pts</span>}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    )}
-
-                    {/* Session Digest Table */}
-                    <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-jam-900 text-jam-400 uppercase text-xs font-bold tracking-wider">
-                                <tr>
-                                    <th className="p-4">Time</th>
-                                    <th className="p-4">Song</th>
-                                    <th className="p-4">Picked By</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-jam-700">
-                                {sessionDigest.map((row) => (
-                                    <tr key={row.id} className="hover:bg-jam-700/30 transition-colors">
-                                        <td className="p-4 font-mono text-jam-500">
-                                            {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="font-bold text-white">{row.title}</div>
-                                            <div className="text-jam-400 text-xs">{row.artist}</div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-jam-700 flex items-center justify-center text-[10px] font-bold text-jam-300">
-                                                    {row.ownerName.charAt(0)}
-                                                </div>
-                                                <span className="text-jam-300">{row.ownerName}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {sessionDigest.length === 0 && (
-                                    <tr><td colSpan={3} className="p-8 text-center text-jam-500 italic">No songs played yet.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
                     </div>
                  </div>
               )}
 
               {statsTab === 'history' && (
                   <div className="space-y-6 animate-fade-in">
-                      <div className="flex items-center gap-4 bg-jam-800 p-4 rounded-xl border border-jam-700">
-                          <label className="text-sm font-bold text-jam-300">Select Date:</label>
-                          <div className="relative flex-1">
-                              <select 
-                                value={historyDate} 
-                                onChange={(e) => setHistoryDate(e.target.value)}
-                                className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-lg px-4 py-2 text-white outline-none focus:border-orange-500 cursor-pointer"
-                              >
-                                  <option value="">-- Choose a session --</option>
-                                  {Object.keys(archives).sort().reverse().map(date => (
-                                      <option key={date} value={date}>{date}</option>
-                                  ))}
-                              </select>
-                              <ChevronDown className="absolute right-3 top-3 text-jam-500 pointer-events-none" size={16} />
+                      <div className="flex flex-col md:flex-row items-center gap-4 bg-jam-800/50 p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
+                          <div className="flex-1 w-full">
+                              <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
+                              <div className="relative">
+                                  <select 
+                                    value={historyDate} 
+                                    onChange={(e) => setHistoryDate(e.target.value)}
+                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-sm"
+                                  >
+                                      <option value="">-- Choose a session --</option>
+                                      {Object.keys(archives).sort().reverse().map(date => (
+                                          <option key={date} value={date}>{date}</option>
+                                      ))}
+                                  </select>
+                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
+                              </div>
                           </div>
                           {historyDate && (
-                              <button onClick={() => deleteHistorySession(historyDate)} className="p-2 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg">
-                                  <Trash2 size={18} />
+                              <button onClick={() => deleteHistorySession(historyDate)} className="p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
+                                  <Trash2 size={20} />
                               </button>
                           )}
                       </div>
 
                       {historyDate && (
-                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden">
+                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden shadow-2xl">
+                              <div className="bg-jam-900/80 p-4 border-b border-jam-700 flex justify-between items-center">
+                                  <h3 className="font-bold text-white flex items-center gap-2">
+                                      <Calendar size={18} className="text-orange-500" /> 
+                                      {historyDate}
+                                  </h3>
+                                  <span className="text-xs text-jam-400 bg-jam-800 px-2 py-1 rounded-lg border border-jam-700">{sessionDigest.length} Songs</span>
+                              </div>
                               <table className="w-full text-left text-sm">
-                                  <thead className="bg-jam-900 text-jam-400 uppercase text-xs font-bold tracking-wider">
+                                  <thead className="bg-jam-900/50 text-jam-400 uppercase text-xs font-bold tracking-wider">
                                       <tr>
-                                          <th className="p-4">Time</th>
-                                          <th className="p-4">Song</th>
-                                          <th className="p-4">Picked By</th>
+                                          <th className="p-4 w-24">Time</th>
+                                          <th className="p-4">Song Details</th>
+                                          <th className="p-4 w-32 text-right">Score</th>
                                       </tr>
                                   </thead>
                                   <tbody className="divide-y divide-jam-700">
                                       {sessionDigest.map((row) => (
-                                          <tr key={row.id} className="hover:bg-jam-700/30 transition-colors">
-                                              <td className="p-4 font-mono text-jam-500">
+                                          <tr key={row.id} className="hover:bg-jam-700/30 transition-colors group">
+                                              <td className="p-4 font-mono text-jam-500 text-xs">
                                                   {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
                                               </td>
                                               <td className="p-4">
-                                                  <div className="font-bold text-white">{row.title}</div>
-                                                  <div className="text-jam-400 text-xs">{row.artist}</div>
-                                              </td>
-                                              <td className="p-4">
-                                                  <div className="flex items-center gap-2">
-                                                      <div className="w-6 h-6 rounded-full bg-jam-700 flex items-center justify-center text-[10px] font-bold text-jam-300">
-                                                          {row.ownerName.charAt(0)}
-                                                      </div>
-                                                      <span className="text-jam-300">{row.ownerName}</span>
+                                                  <div className="font-bold text-white group-hover:text-orange-400 transition-colors">{row.title}</div>
+                                                  <div className="flex items-center gap-2 mt-1">
+                                                      <span className="text-jam-400 text-xs">{row.artist}</span>
+                                                      <span className="w-1 h-1 rounded-full bg-jam-600"></span>
+                                                      <span className="text-jam-500 text-xs flex items-center gap-1">
+                                                          <div className="w-4 h-4 rounded-full bg-jam-700 flex items-center justify-center text-[8px] font-bold text-jam-300">
+                                                              {row.ownerName.charAt(0)}
+                                                          </div>
+                                                          {row.ownerName}
+                                                      </span>
                                                   </div>
+                                              </td>
+                                              <td className="p-4 text-right">
+                                                  {row.score > 0 ? (
+                                                      <span className={`inline-block px-2 py-1 rounded font-mono font-bold text-xs ${row.score >= 90 ? 'text-green-400 bg-green-500/10' : 'text-jam-300 bg-jam-700'}`}>
+                                                          {row.score}
+                                                      </span>
+                                                  ) : (
+                                                      <span className="text-jam-600 text-xs">-</span>
+                                                  )}
                                               </td>
                                           </tr>
                                       ))}
@@ -1246,109 +1265,157 @@ export default function App() {
                   </div>
               )}
 
-              {/* Leaderboards Tab */}
+              {/* Leaderboards Tab - REDESIGNED */}
               {statsTab === 'leaderboards' && (
-                  <div className="space-y-6 animate-fade-in">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {/* Crowd Pleasers Card */}
-                           <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                               <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                   <Zap className="text-orange-400" size={20} /> Crowd Pleasers
-                               </h3>
-                               <p className="text-xs text-jam-400 mb-4">Who picks the best songs on average?</p>
-                               <div className="space-y-4">
-                                   {crowdPleasers.slice(0, 5).map((cp, idx) => {
-                                       const user = participants.find(p => p.userId === cp.userId) || ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === cp.userId);
-                                       const name = typeof user === 'string' ? user : user?.name || cp.userId;
-                                       return (
-                                           <div key={cp.userId} className="flex items-center justify-between p-3 rounded-xl bg-jam-900/50">
-                                               <div className="flex items-center gap-3">
-                                                   <span className="font-bold text-jam-500 w-4">#{idx + 1}</span>
-                                                   <span className="font-bold text-white">{name}</span>
-                                               </div>
-                                               <div className="text-right">
-                                                   <div className="text-sm font-bold text-orange-400">{cp.avgScore} pts</div>
-                                                   <div className="text-[10px] text-jam-500">{cp.songCount} songs</div>
-                                               </div>
-                                           </div>
-                                       );
-                                   })}
-                               </div>
-                           </div>
-
-                           {/* Top Songs All Time */}
-                           <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                               <div className="flex items-center justify-between mb-6">
-                                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                       <Star className="text-yellow-400" size={20} /> Top Songs
-                                   </h3>
-                                   <select 
-                                      className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none"
-                                      value={leaderboardPerspective}
-                                      onChange={(e) => setLeaderboardPerspective(e.target.value)}
-                                   >
-                                      <option value="all">Everyone's Vote</option>
-                                      {ALL_USERS.map(u => (
-                                          <option key={u} value={u.toLowerCase().replace(' ','_')}>{u}'s Vote</option>
-                                      ))}
-                                   </select>
-                               </div>
-                               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
-                                   {leaderboard.map((item, idx) => (
-                                       <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 flex items-center gap-3">
-                                           <div className={`font-bold text-lg w-6 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-600'}`}>#{idx + 1}</div>
-                                           <div className="flex-1 min-w-0">
-                                               <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
-                                               <div className="text-xs text-jam-400 truncate">{item.song.artist}</div>
-                                           </div>
-                                           <div className="font-mono font-bold text-green-400">{item.score}</div>
-                                       </div>
-                                   ))}
-                               </div>
-                           </div>
+                  <div className="space-y-8 animate-fade-in">
+                      
+                      {/* Top 3 Podium (Crowd Pleasers) */}
+                      <div className="relative pt-10 px-4">
+                         <h3 className="text-center font-bold text-white text-xl mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
+                             <Trophy size={24} className="text-yellow-500" />
+                             Crowd Pleasers
+                         </h3>
+                         <div className="flex items-end justify-center gap-2 md:gap-6 mb-8">
+                             {/* Silver */}
+                             {crowdPleasers[1] && (
+                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
+                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[1].userId}</div>
+                                     <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-24 flex items-end justify-center pb-2 relative shadow-lg">
+                                         <div className="text-3xl font-bold text-gray-800 opacity-50">2</div>
+                                     </div>
+                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-gray-500/50 text-xs font-mono text-gray-300">
+                                         {crowdPleasers[1].avgScore} pts
+                                     </div>
+                                 </div>
+                             )}
+                             {/* Gold */}
+                             {crowdPleasers[0] && (
+                                 <div className="flex flex-col items-center w-1/3 max-w-[140px] z-10">
+                                      <div className="text-yellow-400 mb-2 animate-bounce"><Star size={20} fill="currentColor" /></div>
+                                     <div className="text-sm font-bold text-white mb-2">{crowdPleasers[0].userId}</div>
+                                     <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+                                         <div className="text-4xl font-bold text-yellow-800 opacity-50">1</div>
+                                     </div>
+                                     <div className="mt-2 bg-jam-800 px-4 py-1.5 rounded-full border border-yellow-500/50 text-sm font-bold font-mono text-yellow-400">
+                                         {crowdPleasers[0].avgScore} pts
+                                     </div>
+                                 </div>
+                             )}
+                             {/* Bronze */}
+                             {crowdPleasers[2] && (
+                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
+                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[2].userId}</div>
+                                     <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-16 flex items-end justify-center pb-2 relative shadow-lg">
+                                         <div className="text-3xl font-bold text-orange-900 opacity-50">3</div>
+                                     </div>
+                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-orange-700/50 text-xs font-mono text-orange-400">
+                                         {crowdPleasers[2].avgScore} pts
+                                     </div>
+                                 </div>
+                             )}
+                         </div>
+                         <div className="border-t border-jam-800"></div>
                       </div>
+
+                       {/* Top Songs All Time */}
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                           <div className="flex items-center justify-between mb-6">
+                               <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                   <Star className="text-yellow-400" size={20} /> Hall of Fame
+                               </h3>
+                               <select 
+                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
+                                  value={leaderboardPerspective}
+                                  onChange={(e) => setLeaderboardPerspective(e.target.value)}
+                               >
+                                  <option value="all">Global Rank</option>
+                                  {ALL_USERS.map(u => (
+                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>Acc. to {u}</option>
+                                  ))}
+                               </select>
+                           </div>
+                           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+                               {leaderboard.map((item, idx) => (
+                                   <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-4 transition-all">
+                                       <div className={`font-bold text-xl w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
+                                       <div className="flex-1 min-w-0">
+                                           <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
+                                           <div className="text-xs text-jam-400 truncate flex items-center gap-1">
+                                                {item.song.artist} <span className="text-jam-600">•</span> {item.song.ownerName}
+                                           </div>
+                                       </div>
+                                       <div className="flex flex-col items-end">
+                                            <div className="font-mono font-bold text-green-400 text-lg">{item.score}</div>
+                                            <div className="text-[9px] text-jam-500 uppercase">Points</div>
+                                       </div>
+                                   </div>
+                               ))}
+                           </div>
+                       </div>
                   </div>
               )}
 
               {/* Taste Buds Tab */}
               {statsTab === 'taste' && (
-                  <div className="space-y-6 animate-fade-in">
+                  <div className="space-y-8 animate-fade-in">
                        <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                                <Heart className="text-red-400" size={20} /> Musical Soulmates
                            </h3>
-                           <p className="text-sm text-jam-400 mb-6">Based on how similarly you rate the same songs.</p>
+                           <p className="text-sm text-jam-400 mb-6">These pairs have the most similar taste in music based on voting.</p>
                            
-                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                               {tasteSimilarity.map((pair, idx) => {
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                               {tasteData.soulmates.slice(0, 6).map((pair, idx) => {
                                    const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
                                    const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
                                    
                                    return (
-                                       <div key={idx} className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 relative overflow-hidden group">
-                                            <div className="flex items-center justify-between relative z-10">
-                                                <div className="font-bold text-white text-sm">{userA}</div>
-                                                <div className="text-xs font-bold text-jam-500">&</div>
-                                                <div className="font-bold text-white text-sm">{userB}</div>
+                                       <div key={idx} className="bg-jam-900/50 p-5 rounded-2xl border border-jam-700 relative overflow-hidden group">
+                                            <div className="flex items-center justify-between relative z-10 mb-2">
+                                                <div className="font-bold text-white text-base">{userA}</div>
+                                                <Heart size={16} className="text-red-500 fill-red-500/20" />
+                                                <div className="font-bold text-white text-base">{userB}</div>
                                             </div>
-                                            <div className="mt-3 flex items-end justify-between relative z-10">
-                                                <div className="text-3xl font-bold text-orange-500">{pair.score}%</div>
-                                                <div className="text-[10px] text-jam-400">{pair.commonSongs} songs together</div>
+                                            <div className="flex items-end justify-between relative z-10">
+                                                <div className="text-4xl font-bold text-white tracking-tighter">{pair.score}%</div>
+                                                <div className="text-xs text-jam-400 bg-jam-950 px-2 py-1 rounded-lg border border-jam-800">{pair.commonSongs} jams</div>
                                             </div>
-                                            {/* Bar Background */}
-                                            <div className="absolute bottom-0 left-0 h-1 bg-orange-500/20 w-full">
-                                                <div className="h-full bg-orange-500" style={{width: `${pair.score}%`}}></div>
+                                            <div className="absolute bottom-0 left-0 h-1.5 bg-jam-800 w-full">
+                                                <div className="h-full bg-gradient-to-r from-red-500 to-pink-500" style={{width: `${pair.score}%`}}></div>
                                             </div>
                                        </div>
                                    );
                                })}
-                               {tasteSimilarity.length === 0 && (
+                               {tasteData.soulmates.length === 0 && (
                                    <div className="col-span-full text-center py-12 text-jam-500 italic">
                                        Not enough shared ratings yet to verify soulmates. Start jamming!
                                    </div>
                                )}
                            </div>
                        </div>
+
+                       {/* Musical Opposites (Lowest Match) */}
+                       {tasteData.opposites.length > 0 && (
+                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                    <Zap className="text-purple-400" size={20} /> Musical Opposites
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {tasteData.opposites.slice(0, 4).map((pair, idx) => {
+                                        const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
+                                        const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
+                                        return (
+                                            <div key={idx} className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
+                                                <div className="text-sm font-medium text-jam-300">
+                                                    {userA} <span className="text-jam-600 px-1">&</span> {userB}
+                                                </div>
+                                                <div className="text-sm font-bold text-purple-400">{pair.score}% match</div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                       )}
                   </div>
               )}
 
