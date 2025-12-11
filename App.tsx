@@ -22,7 +22,7 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle
+  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -30,7 +30,7 @@ import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSe
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
 import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong } from './components/StatsLogic';
-import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, push, remove } from './services/firebase';
+import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, push, remove, update } from './services/firebase';
 
 // --- Utility Functions ---
 
@@ -364,37 +364,22 @@ export default function App() {
          
          if (savedSessionStr) {
            const parsedSession = safeParse(savedSessionStr, null);
+           setSession(parsedSession);
            
+           // LOCAL STORAGE: Automatic new day handling
            if (parsedSession && parsedSession.date !== today) {
-             // Archive previous day
-             const savedParticipants = safeParse(localStorage.getItem('gs_jam_participants'), []);
-             if (savedParticipants.length > 0) {
-                 savedArchives[parsedSession.date] = {
-                     session: parsedSession,
-                     participants: savedParticipants,
-                     songs: safeParse(localStorage.getItem('gs_jam_songs'), []),
-                     ratings: safeParse(localStorage.getItem('gs_jam_ratings'), [])
-                 };
-                 setArchives(savedArchives);
-                 localStorage.setItem('gs_jam_archive', JSON.stringify(savedArchives));
-             }
-             // Reset
-             const newSession = { id: generateId(), date: today };
-             setSession(newSession);
-             setParticipants([]); setSongs([]); setRatings([]); setQueueIds([]);
-             localStorage.setItem('gs_jam_session', JSON.stringify(newSession));
-             localStorage.setItem('gs_jam_participants', '[]');
-             localStorage.setItem('gs_jam_songs', '[]');
-             localStorage.setItem('gs_jam_ratings', '[]');
-             localStorage.setItem('gs_jam_queue_ids', '[]');
-           } else {
-             // Resume
-             setSession(parsedSession);
-             setParticipants(safeParse(localStorage.getItem('gs_jam_participants'), []));
-             setSongs(safeParse(localStorage.getItem('gs_jam_songs'), []));
-             setRatings(safeParse(localStorage.getItem('gs_jam_ratings'), []));
-             setQueueIds(safeParse(localStorage.getItem('gs_jam_queue_ids'), []));
+             // We won't automatically archive here to avoid confusion, 
+             // but we will let the UI prompt handle it, or we could keep it auto for local storage.
+             // For consistency with Firebase, let's just load it and let the user click "Start New".
+             // However, to match previous behavior that users might expect locally:
+             // Actually, let's standardise: Load whatever is there. Let the banner handle the reset.
            }
+           
+           setParticipants(safeParse(localStorage.getItem('gs_jam_participants'), []));
+           setSongs(safeParse(localStorage.getItem('gs_jam_songs'), []));
+           setRatings(safeParse(localStorage.getItem('gs_jam_ratings'), []));
+           setQueueIds(safeParse(localStorage.getItem('gs_jam_queue_ids'), []));
+
          } else {
              const newSession = { id: generateId(), date: today };
              setSession(newSession);
@@ -434,6 +419,62 @@ export default function App() {
 
 
   // --- Logic Helpers ---
+  
+  const startNewSession = () => {
+      if (!session) return;
+      if (!confirm("Are you sure? This will archive the current session to History and start a fresh queue for today.")) return;
+
+      const archiveDate = session.date;
+      const today = getLocalDate();
+      
+      // 1. Archive Data
+      const archiveData = {
+          session,
+          participants,
+          songs,
+          ratings
+      };
+      
+      // 2. Reset Data Object
+      const newSession = { id: generateId(), date: today };
+      
+      if (isFirebaseConnected && isFirebaseReady()) {
+          const db = getDb();
+          const updates: any = {};
+          
+          // Save to Archive
+          updates[`archives/${archiveDate}`] = sanitizeForFirebase(archiveData);
+          
+          // Reset Current
+          updates['session'] = newSession;
+          updates['participants'] = null; // null deletes the node
+          updates['songs'] = null;
+          updates['ratings'] = null;
+          updates['queueIds'] = null;
+          
+          update(ref(db), updates);
+      } else {
+          // Local Storage logic
+          const newArchives = { ...archives, [archiveDate]: archiveData };
+          setArchives(newArchives);
+          localStorage.setItem('gs_jam_archive', JSON.stringify(newArchives));
+          
+          setSession(newSession);
+          localStorage.setItem('gs_jam_session', JSON.stringify(newSession));
+          
+          setParticipants([]); localStorage.setItem('gs_jam_participants', '[]');
+          setSongs([]); localStorage.setItem('gs_jam_songs', '[]');
+          setRatings([]); localStorage.setItem('gs_jam_ratings', '[]');
+          setQueueIds([]); localStorage.setItem('gs_jam_queue_ids', '[]');
+      }
+      
+      // Reset local UI states
+      setParticipants([]);
+      setSongs([]);
+      setRatings([]);
+      setQueueIds([]);
+      setSession(newSession);
+  };
 
   const handleJoinSelection = (userName: UserName) => {
     setJoiningUser(userName);
@@ -805,6 +846,8 @@ export default function App() {
     .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
 
   const isFormValid = newSong.title && newSong.ownerId && (newSong.link || newSong.screenshot);
+  
+  const isSessionOld = session && session.date !== getLocalDate();
 
   // --- Render ---
 
@@ -841,9 +884,13 @@ export default function App() {
         <div className="bg-jam-800 p-8 rounded-2xl border border-jam-700 shadow-2xl w-full max-w-md relative overflow-hidden">
           {/* Status Indicator */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
-            {isFirebaseConnected && (
-               <span className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold uppercase tracking-wider bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
-                 <CloudLightning size={10} /> Online
+            {isFirebaseConnected ? (
+               <span className="flex items-center gap-1.5 text-green-400 text-[10px] font-bold uppercase tracking-wider bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20" title="Data saved to Database">
+                 <Database size={10} /> Online
+               </span>
+            ) : (
+               <span className="flex items-center gap-1.5 text-jam-400 text-[10px] font-bold uppercase tracking-wider bg-jam-700 px-2 py-1 rounded-full border border-jam-600" title="Data saved to Browser only">
+                 <Database size={10} /> Local
                </span>
             )}
           </div>
@@ -881,24 +928,6 @@ export default function App() {
                         <span className="text-jam-300">Songs Played</span>
                         <span className="text-white font-bold">{songs.filter(s => s.playStatus === 'played').length}</span>
                     </div>
-                    {/* Show last 3 played songs */}
-                    {songs.filter(s => s.playStatus === 'played').length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-jam-700/50">
-                            <p className="text-xs text-jam-500 mb-2">Recently Played:</p>
-                            <div className="space-y-1">
-                                {songs
-                                    .filter(s => s.playStatus === 'played')
-                                    .sort((a,b) => (b.playedAt || 0) - (a.playedAt || 0)) // Newest first for preview
-                                    .slice(0, 3)
-                                    .map(s => (
-                                        <div key={s.id} className="text-xs text-jam-300 truncate">
-                                            🎶 {s.title} <span className="text-jam-500">- {s.ownerName}</span>
-                                        </div>
-                                    ))
-                                }
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
           )}
@@ -920,10 +949,10 @@ export default function App() {
            </h1>
            <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-jam-300 uppercase tracking-wider">Live Session</span>
+                <div className={`w-2 h-2 rounded-full ${isFirebaseConnected ? 'bg-green-500' : 'bg-jam-500'} animate-pulse`}></div>
+                <span className="text-xs font-bold text-jam-300 uppercase tracking-wider">{isFirebaseConnected ? 'Live Session' : 'Local Mode'}</span>
               </div>
-              <div className="text-xs text-jam-500 font-mono">{session?.date}</div>
+              <div className={`text-xs font-mono ${isSessionOld ? 'text-red-400 font-bold' : 'text-jam-500'}`}>{session?.date}</div>
            </div>
         </div>
         
@@ -985,6 +1014,30 @@ export default function App() {
               <button onClick={() => setCurrentUser(null)} className="p-2 rounded-lg bg-jam-800 text-red-400"><LogOut size={20}/></button>
            </div>
         </div>
+        
+        {/* Old Session Warning & Action */}
+        {isSessionOld && (
+            <div className="mb-6 p-4 rounded-xl bg-orange-600/10 border border-orange-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-orange-500/20 rounded-full text-orange-500"><Archive size={20} /></div>
+                    <div>
+                        <h3 className="font-bold text-white text-sm">Previous Session Active ({session?.date})</h3>
+                        <p className="text-xs text-jam-400">Archive this session to history and start today's jam?</p>
+                    </div>
+                </div>
+                <Button variant="primary" onClick={startNewSession}>
+                    Archive & Start New Session
+                </Button>
+            </div>
+        )}
+
+        {/* Local Storage Warning */}
+        {!isFirebaseConnected && (
+             <div className="mb-6 px-4 py-2 rounded-lg bg-jam-800 border border-jam-700 flex items-center gap-2 text-xs text-jam-400">
+                <Database size={12} className="text-jam-500" />
+                <span>Running in Local Mode. Set Firebase Env Vars in Vercel to sync across devices.</span>
+             </div>
+        )}
 
         {view === 'jam' && (
           <div className="max-w-3xl mx-auto space-y-6 pb-40">
