@@ -314,6 +314,7 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false); // New state to track if search was performed
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [manualSearchUrl, setManualSearchUrl] = useState<string>('');
 
   // --- Initialization & Data Loading ---
 
@@ -600,6 +601,7 @@ export default function App() {
     setSearchResults([]);
     setHasSearched(false);
     setSearchError(null);
+    setManualSearchUrl('');
     setShowAddSong(true);
   };
 
@@ -617,6 +619,7 @@ export default function App() {
     setSearchResults([]);
     setHasSearched(false);
     setSearchError(null);
+    setManualSearchUrl('');
     setShowAddSong(true);
   };
 
@@ -676,6 +679,7 @@ export default function App() {
     setHasSearched(true);
     setIsSearching(true);
     setSearchError(null);
+    setManualSearchUrl('');
     setSearchResults([]); // clear previous
 
     const result = await searchChords(newSong.title, newSong.artist);
@@ -684,6 +688,7 @@ export default function App() {
         setSearchResults(result.data);
     } else {
         setSearchError(result.error || "Unknown search error");
+        if (result.manualSearchUrl) setManualSearchUrl(result.manualSearchUrl);
     }
     
     setIsSearching(false);
@@ -838,6 +843,25 @@ export default function App() {
       return { ...s, score: stats ? stats.score : 0 };
     });
   }, [activeStatsSongs, activeStatsRatings]);
+
+  // NEW: Merged timeline for interleaved events
+  const mergedTimeline = useMemo(() => {
+    const arrivals = activeStatsParticipants.map(p => ({
+        type: 'arrival' as const,
+        data: p,
+        time: p.arrivalTime,
+        id: p.id
+    }));
+
+    const songs = sessionDigest.map(s => ({
+        type: 'song' as const,
+        data: s,
+        time: s.playedAt || 0,
+        id: s.id
+    }));
+
+    return [...arrivals, ...songs].sort((a, b) => a.time - b.time);
+  }, [activeStatsParticipants, sessionDigest]);
 
   const leaderboard = useMemo(() => {
      return getLeaderboard(songs, ratings, leaderboardPerspective === 'all' ? undefined : leaderboardPerspective);
@@ -1231,29 +1255,36 @@ export default function App() {
                                 <TrendingUp className="text-blue-400" size={20} /> Timeline
                             </h3>
                             <div className="relative ml-2 space-y-6 before:absolute before:inset-0 before:ml-2.5 before:w-0.5 before:-translate-x-1/2 before:bg-gradient-to-b before:from-blue-500 before:to-jam-800 before:h-full">
-                                {arrivalTimeline.map((p, i) => (
-                                    <div key={p.id} className="relative pl-8 group">
-                                        <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-blue-500 bg-jam-950 flex items-center justify-center z-10">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:animate-ping"></div>
-                                        </div>
-                                        <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{p.name} joined</div>
-                                        <div className="text-xs text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                                    </div>
-                                ))}
-                                {sessionDigest.map((s, i) => (
-                                    <div key={'s'+s.id} className="relative pl-8 group">
-                                        <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-jam-600 bg-jam-950 flex items-center justify-center z-10">
-                                            <Music size={10} className="text-jam-400" />
-                                        </div>
-                                        <div className="text-sm font-medium text-jam-200">
-                                            <span className="font-bold text-white">{s.title}</span> <span className="text-jam-500">by</span> {s.ownerName}
-                                        </div>
-                                        <div className="text-xs text-jam-500 font-mono mt-0.5">
-                                            {s.playedAt ? new Date(s.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''} 
-                                            {s.score > 0 && <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${s.score >= 90 ? 'bg-green-500/20 text-green-400' : 'bg-jam-700 text-jam-400'}`}>{s.score} pts</span>}
-                                        </div>
-                                    </div>
-                                ))}
+                                {mergedTimeline.map((item) => {
+                                    if (item.type === 'arrival') {
+                                        const p = item.data as JamParticipant;
+                                        return (
+                                            <div key={'arr-'+p.id} className="relative pl-8 group">
+                                                <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-blue-500 bg-jam-950 flex items-center justify-center z-10">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:animate-ping"></div>
+                                                </div>
+                                                <div className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">{p.name} joined</div>
+                                                <div className="text-xs text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                                            </div>
+                                        );
+                                    } else {
+                                        const s = item.data as any; // Using any to access score easily, derived from sessionDigest
+                                        return (
+                                            <div key={'song-'+s.id} className="relative pl-8 group">
+                                                <div className="absolute left-0 top-1.5 w-5 h-5 -ml-px rounded-full border-2 border-jam-600 bg-jam-950 flex items-center justify-center z-10">
+                                                    <Music size={10} className="text-jam-400" />
+                                                </div>
+                                                <div className="text-sm font-medium text-jam-200">
+                                                    <span className="font-bold text-white">{s.title}</span> <span className="text-jam-500">by</span> {s.ownerName}
+                                                </div>
+                                                <div className="text-xs text-jam-500 font-mono mt-0.5">
+                                                    {s.playedAt ? new Date(s.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''} 
+                                                    {s.score > 0 && <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold ${s.score >= 90 ? 'bg-green-500/20 text-green-400' : 'bg-jam-700 text-jam-400'}`}>{s.score} pts</span>}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                })}
                             </div>
                         </div>
                     </div>
@@ -1570,7 +1601,17 @@ export default function App() {
                          <div className="text-red-400 text-sm font-bold flex items-center justify-center gap-2">
                              <ShieldAlert size={16} /> Search Failed
                          </div>
-                         <div className="text-xs text-jam-400 mt-1">{searchError}</div>
+                         <div className="text-xs text-jam-400 mt-1 mb-2">{searchError}</div>
+                         
+                         {/* Fallback Manual Search Button - ALWAYS shown on error */}
+                         {manualSearchUrl && (
+                             <button 
+                                onClick={() => window.open(manualSearchUrl, '_blank')}
+                                className="text-xs bg-jam-800 hover:bg-jam-700 text-white border border-jam-600 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
+                             >
+                                <Search size={12} /> Google Search Manually
+                             </button>
+                         )}
                       </div>
                     )}
                     
