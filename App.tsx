@@ -332,7 +332,17 @@ export default function App() {
        // --- FIREBASE MODE ---
        const db = getDb();
        
-       const unsubSession = onValue(ref(db, 'session'), (snap) => setSession(snap.val() || null));
+       const unsubSession = onValue(ref(db, 'session'), (snap) => {
+          const val = snap.val();
+          if (!val) {
+             const today = getLocalDate();
+             const newSession = { id: generateId(), date: today };
+             set(ref(db, 'session'), newSession);
+          } else {
+             setSession(val);
+          }
+       });
+
        const unsubParticipants = onValue(ref(db, 'participants'), (snap) => setParticipants(snap.val() ? Object.values(snap.val()) : []));
        const unsubSongs = onValue(ref(db, 'songs'), (snap) => setSongs(snap.val() ? Object.values(snap.val()) : []));
        const unsubRatings = onValue(ref(db, 'ratings'), (snap) => setRatings(snap.val() ? Object.values(snap.val()) : []));
@@ -809,8 +819,8 @@ export default function App() {
              <h2 className="text-2xl font-bold mb-2 text-white">Hi, {joiningUser} 👋</h2>
              <p className="text-jam-400 mb-6">When did you arrive to the jam?</p>
              <div className="space-y-4">
-                <Button variant="primary" className="w-full py-4 text-lg" onClick={() => confirmJoin('now')}>
-                  <Clock size={24} /> I Arrived Just Now
+                <Button variant="primary" className="w-full py-4 text-lg" onClick={() => confirmJoin('now')} disabled={!session}>
+                  {session ? <><Clock size={24} /> I Arrived Just Now</> : "Loading..."}
                 </Button>
                 <div className="relative py-2">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-jam-700"></div></div>
@@ -819,7 +829,7 @@ export default function App() {
                 <div className="bg-jam-900 p-5 rounded-xl border border-jam-700">
                   <label className="block text-sm text-jam-300 mb-3 font-medium">Arrival Time:</label>
                   <input type="time" step="1" value={manualArrivalTime} onChange={(e) => setManualArrivalTime(e.target.value)} className="w-full bg-jam-800 border border-jam-600 rounded-lg p-3 text-white text-xl text-center focus:border-orange-500 outline-none" />
-                  <Button variant="secondary" className="w-full mt-4" onClick={() => confirmJoin('manual')}>Confirm Time</Button>
+                  <Button variant="secondary" className="w-full mt-4" onClick={() => confirmJoin('manual')} disabled={!session}>Confirm Time</Button>
                 </div>
              </div>
           </div>
