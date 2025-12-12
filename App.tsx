@@ -24,7 +24,7 @@ import {
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, LogOut, Undo2, UserPlus, Star, Eye,
   Zap, Flame, TrendingUp, Sparkles, Mic2, Database, Archive, Link as LinkIcon, Languages, Globe,
-  ThumbsUp
+  ThumbsUp, StopCircle, RefreshCw
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -441,9 +441,11 @@ export default function App() {
           const val = snap.val();
           if (!val) {
              const today = getLocalDate();
-             const newSession = { id: generateId(), date: today };
+             const newSession = { id: generateId(), date: today, status: 'active' };
              set(ref(db, 'session'), newSession);
           } else {
+             // Backward compat: if status is missing, treat as active
+             if (!val.status) val.status = 'active';
              setSession(val);
           }
        });
@@ -469,14 +471,16 @@ export default function App() {
          
          if (savedSessionStr) {
            const parsedSession = safeParse(savedSessionStr, null);
+           // Backward compat
+           if (!parsedSession.status) parsedSession.status = 'active';
            setSession(parsedSession);
            setParticipants(safeParse(localStorage.getItem('gs_jam_participants'), []));
            setSongs(safeParse(localStorage.getItem('gs_jam_songs'), []));
            setRatings(safeParse(localStorage.getItem('gs_jam_ratings'), []));
            setQueueIds(safeParse(localStorage.getItem('gs_jam_queue_ids'), []));
          } else {
-             const newSession = { id: generateId(), date: today };
-             setSession(newSession);
+             const newSession = { id: generateId(), date: today, status: 'active' };
+             setSession(newSession as JamSession);
              localStorage.setItem('gs_jam_session', JSON.stringify(newSession));
          }
        } catch (err) {
@@ -530,7 +534,7 @@ export default function App() {
       };
       
       // 2. Reset Data Object
-      const newSession = { id: generateId(), date: today };
+      const newSession = { id: generateId(), date: today, status: 'active' };
       
       if (isFirebaseConnected && isFirebaseReady()) {
           const db = getDb();
@@ -553,7 +557,7 @@ export default function App() {
           setArchives(newArchives);
           localStorage.setItem('gs_jam_archive', JSON.stringify(newArchives));
           
-          setSession(newSession);
+          setSession(newSession as JamSession);
           localStorage.setItem('gs_jam_session', JSON.stringify(newSession));
           
           setParticipants([]); localStorage.setItem('gs_jam_participants', '[]');
@@ -567,7 +571,50 @@ export default function App() {
       setSongs([]);
       setRatings([]);
       setQueueIds([]);
-      setSession(newSession);
+      setSession(newSession as JamSession);
+  };
+
+  const endSession = () => {
+      if(!session) return;
+      if(!confirm("Are you sure you want to end this jam session?")) return;
+      
+      const updatedSession = { ...session, status: 'ended' };
+      setSession(updatedSession as JamSession);
+      updateData('session', updatedSession);
+  };
+
+  const reopenSession = () => {
+      if(!session) return;
+      const updatedSession = { ...session, status: 'active' };
+      setSession(updatedSession as JamSession);
+      updateData('session', updatedSession);
+  };
+
+  const leaveSession = () => {
+      if (!currentUser) return;
+      if (!confirm("Leave this session? This will remove all your songs that haven't been played yet.")) return;
+
+      const userIdToRemove = currentUser.id;
+
+      // 1. Remove user's unplayed songs
+      const songsToKeep = songs.filter(s => s.ownerUserId !== userIdToRemove || s.playStatus !== 'not_played');
+      
+      // 2. Remove participant
+      const participantsToKeep = participants.filter(p => p.userId !== userIdToRemove);
+
+      // 3. Update all data
+      setSongs(songsToKeep);
+      updateData('songs', songsToKeep);
+      
+      setParticipants(participantsToKeep);
+      updateData('participants', participantsToKeep);
+
+      const newQ = rebalanceQueue(songsToKeep, participantsToKeep, queueIds);
+      setQueueIds(newQ);
+      updateData('queueIds', newQ);
+
+      // 4. Logout
+      setCurrentUser(null);
   };
 
   const handleJoinSelection = (userName: UserName) => {
@@ -1049,8 +1096,8 @@ export default function App() {
   // --- Reusable Dashboard Render ---
   const renderDashboardContent = () => (
       <div className="space-y-8 animate-fade-in">
-          {/* Session Pulse Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Session Pulse Dashboard (Modified 3 Cols) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
                   <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Music size={64} /></div>
                   <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Total Songs</div>
@@ -1068,13 +1115,6 @@ export default function App() {
                   <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-1000 ${sessionSummary.vibeScore > 80 ? 'bg-green-500' : sessionSummary.vibeScore > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width: `${sessionSummary.vibeScore}%`}}></div>
                   </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Mic2 size={64} className="text-blue-500"/></div>
-                  <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">MVP</div>
-                  <div className="text-xl font-bold text-white truncate">{sessionSummary.topContributor}</div>
-                  <div className="text-xs text-jam-500 mt-2">Most songs played</div>
               </div>
               
               {/* Language Balance Card */}
@@ -1192,7 +1232,30 @@ export default function App() {
       </div>
   );
 
-  // --- Render ---
+  // --- Session Ended Overlay ---
+  if (session && session.status === 'ended' && currentUser) {
+      return (
+          <div className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-jam-900 to-orange-900 flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+              <div className="animate-pulse-glow p-8 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-lg">
+                  <Music size={80} className="text-white" />
+              </div>
+              <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-purple-400 mb-6 tracking-tight">
+                  JAM SESSION IS OVER!
+              </h1>
+              <p className="text-2xl text-white font-bold mb-12 animate-bounce">
+                  Now get up and dance! 💃🕺
+              </p>
+              
+              <div className="flex gap-4">
+                  <Button variant="secondary" onClick={reopenSession} className="bg-white/10 hover:bg-white/20 border-white/20 text-white">
+                      <Undo2 size={18} /> Reopen Session
+                  </Button>
+              </div>
+          </div>
+      );
+  }
+
+  // --- Render (Logged Out) ---
 
   if (!currentUser) {
     if (joiningUser) {
@@ -1258,20 +1321,27 @@ export default function App() {
           {session && (
             <div className="mt-8 pt-6 border-t border-jam-700 w-full">
                 <h3 className="text-jam-400 text-xs font-bold uppercase mb-3 text-center">Current Session</h3>
-                <div className="bg-jam-900/50 rounded-xl p-4 space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-jam-300">Participants</span>
-                        <span className="text-white font-bold">{participants.length}</span>
+                {session.status === 'ended' ? (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                        <div className="text-red-400 font-bold mb-1">Session Ended</div>
+                        <div className="text-xs text-jam-400">Join to reopen if needed</div>
                     </div>
-                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-jam-300">Songs in Queue</span>
-                        <span className="text-white font-bold">{queueIds.length}</span>
+                ) : (
+                    <div className="bg-jam-900/50 rounded-xl p-4 space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-jam-300">Participants</span>
+                            <span className="text-white font-bold">{participants.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-jam-300">Songs in Queue</span>
+                            <span className="text-white font-bold">{queueIds.length}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-jam-300">Songs Played</span>
+                            <span className="text-white font-bold">{songs.filter(s => s.playStatus === 'played').length}</span>
+                        </div>
                     </div>
-                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-jam-300">Songs Played</span>
-                        <span className="text-white font-bold">{songs.filter(s => s.playStatus === 'played').length}</span>
-                    </div>
-                </div>
+                )}
             </div>
           )}
 
@@ -1339,11 +1409,21 @@ export default function App() {
           </div>
         </div>
 
+        {/* Sidebar Footer Actions */}
+        <div className="px-4 pb-2 space-y-2">
+             <button onClick={leaveSession} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-jam-400 hover:text-white hover:bg-jam-800 border border-jam-800 hover:border-jam-700 transition-all">
+                <LogOut size={14} /> Leave Session
+             </button>
+             <button onClick={endSession} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 transition-all">
+                <StopCircle size={14} /> End Session
+             </button>
+        </div>
+
         <div className="p-4 border-t border-jam-800 bg-jam-900/50">
            <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-jam-500">Logged in as</span>
-              <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-red-400 transition-colors" title="Logout">
-                  <LogOut size={14} />
+              <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-white transition-colors" title="Logout (Keep Songs)">
+                  <RefreshCw size={14} />
               </button>
            </div>
            <div className="font-bold text-white truncate">{currentUser.name}</div>
@@ -1365,17 +1445,18 @@ export default function App() {
                     >
                         <Users size={18} />
                     </button>
-                    <button onClick={() => setCurrentUser(null)} className="p-2 rounded-lg bg-jam-800 text-red-400 border border-jam-700"><LogOut size={18}/></button>
+                    <button onClick={endSession} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20" title="End Session"><StopCircle size={18}/></button>
                </div>
             </div>
             
-            <div className="flex items-center justify-between bg-jam-800/50 p-3 rounded-xl border border-jam-700">
+            <div className="flex items-center justify-between bg-jam-800/50 p-3 rounded-xl border border-jam-700 mb-3">
                 <div className="text-xs font-bold text-jam-400">Logged in as: <span className="text-white ml-1">{currentUser.name}</span></div>
                 <div className="flex gap-2">
                   <button onClick={() => setView('jam')} className={`p-1.5 px-3 rounded-lg text-xs font-bold uppercase tracking-wider ${view === 'jam' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}>Jam</button>
                   <button onClick={() => setView('stats')} className={`p-1.5 px-3 rounded-lg text-xs font-bold uppercase tracking-wider ${view === 'stats' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}>Stats</button>
                </div>
             </div>
+            <button onClick={leaveSession} className="w-full py-2 bg-jam-800/50 text-jam-400 text-xs font-bold uppercase rounded-lg border border-jam-800 hover:text-white hover:bg-jam-800 mb-2">Leave Session & Clear Songs</button>
         </div>
         
         {/* Old Session Warning & Action */}

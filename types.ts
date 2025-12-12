@@ -1,3 +1,4 @@
+
 export type UserName = 
   | "Philip" | "Carly" | "Jessica" | "Michal K" | "Moran" 
   | "Roi" | "Yael" | "Ortal" | "Gali" | "Dudi" 
@@ -50,6 +51,7 @@ export interface Rating {
 export interface JamSession {
   id: string;
   date: string; // YYYY-MM-DD
+  status: 'active' | 'ended';
 }
 
 export interface ChordSearchResult {

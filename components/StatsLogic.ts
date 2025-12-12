@@ -34,7 +34,6 @@ export interface SessionSummary {
   totalSongs: number;
   totalDurationMin: number; // Estimate
   vibeScore: number; // Avg of all ratings
-  topContributor: string;
   languages: LanguageStats;
 }
 
@@ -105,7 +104,6 @@ export const getSessionSummary = (songs: SongChoice[], ratings: Rating[]): Sessi
       totalSongs: 0, 
       totalDurationMin: 0, 
       vibeScore: 0, 
-      topContributor: '-',
       languages
   };
 
@@ -124,26 +122,10 @@ export const getSessionSummary = (songs: SongChoice[], ratings: Rating[]): Sessi
 
   const vibeScore = ratingCount > 0 ? Math.round(totalRatingVal / ratingCount) : 0;
 
-  // Find Top Contributor (Most songs played)
-  const counts: Record<string, number> = {};
-  played.forEach(s => {
-    counts[s.ownerName] = (counts[s.ownerName] || 0) + 1;
-  });
-  
-  let topContributor = '-';
-  let maxCount = 0;
-  Object.entries(counts).forEach(([name, count]) => {
-    if (count > maxCount) {
-      maxCount = count;
-      topContributor = name;
-    }
-  });
-
   return {
     totalSongs: played.length,
     totalDurationMin: played.length * 4, // Approx 4 mins per song
     vibeScore,
-    topContributor,
     languages
   };
 };
