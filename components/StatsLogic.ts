@@ -248,7 +248,7 @@ export const getUserRatingHistory = (userId: string, ratings: Rating[], songs: S
     const userRatings = ratings.filter(r => r.userId === userId);
     
     // 2. Map to song details
-    return userRatings.map(r => {
+    const mapped = userRatings.map(r => {
         const song = songs.find(s => s.id === r.songChoiceId);
         if (!song) return null;
         return {
@@ -258,5 +258,10 @@ export const getUserRatingHistory = (userId: string, ratings: Rating[], songs: S
             performer: song.ownerName,
             playedAt: song.playedAt
         };
-    }).filter(Boolean).sort((a, b) => (b!.playedAt || 0) - (a!.playedAt || 0));
+    });
+
+    // 3. Filter nulls safely using a type predicate
+    return mapped
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0));
 };
