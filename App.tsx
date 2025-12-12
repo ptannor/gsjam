@@ -31,7 +31,7 @@ import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
 import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult, RatingValue } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
-import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences } from './components/StatsLogic';
+import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences, SessionSummary } from './components/StatsLogic';
 import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, update } from './services/firebase';
 
 // --- Utility Functions ---
@@ -114,6 +114,30 @@ const Button = ({ onClick, children, variant = 'primary', className = '', disabl
     </button>
   );
 };
+
+// --- Reusable Stats Components ---
+
+const LanguageBalanceCard = ({ languages }: { languages: SessionSummary['languages'] }) => (
+    <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
+        <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
+        <div className="flex items-center gap-4 mt-1">
+            <div>
+                <div className="text-lg font-bold text-white">{languages.hebrew}</div>
+                <div className="text-[10px] text-jam-500 uppercase">Hebrew</div>
+            </div>
+            <div className="h-8 w-px bg-jam-700"></div>
+            <div>
+                <div className="text-lg font-bold text-white">{languages.english}</div>
+                <div className="text-[10px] text-jam-500 uppercase">English</div>
+            </div>
+        </div>
+        <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden flex">
+            <div className="h-full bg-purple-500 transition-all" style={{width: `${languages.hebrewPct}%`}}></div>
+            <div className="h-full bg-blue-500 transition-all" style={{width: `${languages.englishPct}%`}}></div>
+        </div>
+    </div>
+);
 
 // --- Sortable Item Component ---
 
@@ -842,40 +866,54 @@ export default function App() {
     }
   };
 
-  // --- Derived Stats Data ---
-  const statsDataset = useMemo(() => {
-    // History Tab: Use archived data
-    if (statsTab === 'history' && historyDate && archives[historyDate]) {
-        return archives[historyDate];
-    }
-    // Default (Today, Leaderboards, Taste): Use current session data
-    return { participants, songs, ratings };
+  // --- Stats Aggregation ---
+
+  // 1. Global Data (All Time = Current + Archives)
+  const globalDataset = useMemo(() => {
+      let allSongs = [...songs];
+      let allRatings = [...ratings];
+      let allParticipants = [...participants]; 
+
+      // Cast to array safely
+      const archivedSessions = Object.values(archives) as ArchivedSessionData[];
+      archivedSessions.forEach(arch => {
+          allSongs = [...allSongs, ...arch.songs];
+          allRatings = [...allRatings, ...arch.ratings];
+          allParticipants = [...allParticipants, ...arch.participants];
+      });
+      
+      return { songs: allSongs, ratings: allRatings, participants: allParticipants };
+  }, [songs, ratings, participants, archives]);
+
+  // 2. Active View Data (Contextual: Today vs Specific History)
+  const activeViewDataset = useMemo(() => {
+      // History Tab: Use specific archived data
+      if (statsTab === 'history' && historyDate && archives[historyDate]) {
+          return archives[historyDate];
+      }
+      // Default (Today, or fallback): Use current session data
+      return { participants, songs, ratings };
   }, [statsTab, historyDate, archives, participants, songs, ratings]);
 
-  const { participants: activeStatsParticipants, songs: activeStatsSongs, ratings: activeStatsRatings } = statsDataset;
+  // --- Derived Stats Calculations ---
 
-  const sessionSummary = useMemo(() => getSessionSummary(activeStatsSongs, activeStatsRatings), [activeStatsSongs, activeStatsRatings]);
+  // Session Summary (For Today/History Dashboards) -> uses activeViewDataset
+  const sessionSummary = useMemo(() => getSessionSummary(activeViewDataset.songs, activeViewDataset.ratings), [activeViewDataset]);
 
-  const arrivalTimeline = useMemo(() => {
-    return [...activeStatsParticipants].sort((a,b) => a.arrivalTime - b.arrivalTime);
-  }, [activeStatsParticipants]);
-
-  // Changed Order: Chronological (Oldest played first -> Newest played last)
-  // This reads like a setlist history
+  // Timeline & Digest (For Today/History) -> uses activeViewDataset
   const sessionDigest = useMemo(() => {
-    const played = activeStatsSongs
+    const played = activeViewDataset.songs
       .filter(s => s.playStatus === 'played')
       .sort((a,b) => (a.playedAt || 0) - (b.playedAt || 0)); 
     
     return played.map(s => {
-      const stats = calculateSongScore(s.id, activeStatsRatings);
+      const stats = calculateSongScore(s.id, activeViewDataset.ratings);
       return { ...s, score: stats ? stats.score : 0 };
     });
-  }, [activeStatsSongs, activeStatsRatings]);
+  }, [activeViewDataset]);
 
-  // NEW: Merged timeline for interleaved events
   const mergedTimeline = useMemo(() => {
-    const arrivals = activeStatsParticipants.map(p => ({
+    const arrivals = activeViewDataset.participants.map(p => ({
         type: 'arrival' as const,
         data: p,
         time: p.arrivalTime,
@@ -890,54 +928,39 @@ export default function App() {
     }));
 
     return [...arrivals, ...songs].sort((a, b) => a.time - b.time);
-  }, [activeStatsParticipants, sessionDigest]);
+  }, [activeViewDataset, sessionDigest]);
 
+  // Leaderboards & Taste Buds -> use GLOBAL Dataset (All Time)
   const leaderboard = useMemo(() => {
-     return getLeaderboard(songs, ratings, leaderboardPerspective === 'all' ? undefined : leaderboardPerspective);
-  }, [songs, ratings, leaderboardPerspective]);
+     return getLeaderboard(globalDataset.songs, globalDataset.ratings, leaderboardPerspective === 'all' ? undefined : leaderboardPerspective);
+  }, [globalDataset, leaderboardPerspective]);
 
   const crowdPleasers = useMemo(() => {
-    return getCrowdPleasers(songs, ratings);
-  }, [songs, ratings]);
+    return getCrowdPleasers(globalDataset.songs, globalDataset.ratings);
+  }, [globalDataset]);
 
   const tasteData = useMemo(() => {
-    return calculateTasteSimilarity(ratings, participants);
-  }, [ratings, participants]);
+    return calculateTasteSimilarity(globalDataset.ratings, globalDataset.participants);
+  }, [globalDataset]);
 
   const languagePreferences = useMemo(() => {
-      // For language preferences, we use active stats (history aware)
-      return getLanguagePreferences(activeStatsSongs, activeStatsRatings);
-  }, [activeStatsSongs, activeStatsRatings]);
+      return getLanguagePreferences(globalDataset.songs, globalDataset.ratings);
+  }, [globalDataset]);
   
   const biggestThieves = useMemo(() => {
-      // Use activeStatsSongs so it works for History too
-      return getBiggestThieves(activeStatsSongs);
-  }, [activeStatsSongs]);
+      return getBiggestThieves(globalDataset.songs);
+  }, [globalDataset]);
 
   const userRatingsHistory = useMemo(() => {
       if (!rankingHistoryUser) return [];
-      // Combine current songs and ALL archived songs to find every rating ever
-      let allHistorySongs = [...songs];
-      let allHistoryRatings = [...ratings];
-      
-      // Fix: Cast the output of Object.values to avoid 'unknown' type error in strict mode
-      (Object.values(archives) as ArchivedSessionData[]).forEach(arch => {
-          allHistorySongs = [...allHistorySongs, ...arch.songs];
-          allHistoryRatings = [...allHistoryRatings, ...arch.ratings];
-      });
-      
-      // Deduplicate songs by ID (in case of weird data)
-      const uniqueSongs = Array.from(new Map(allHistorySongs.map(s => [s.id, s])).values());
-      const uniqueRatings = Array.from(new Map(allHistoryRatings.map(r => [r.id, r])).values());
-      
-      return getUserRatingHistory(rankingHistoryUser, uniqueRatings, uniqueSongs);
-  }, [rankingHistoryUser, songs, ratings, archives]);
+      return getUserRatingHistory(rankingHistoryUser, globalDataset.ratings, globalDataset.songs);
+  }, [rankingHistoryUser, globalDataset]);
 
   const userLanguageStats = useMemo(() => {
-    // Only calculate for active tab data
-    return getUserLanguageStats(activeStatsSongs);
-  }, [activeStatsSongs]);
+    return getUserLanguageStats(globalDataset.songs);
+  }, [globalDataset]);
 
+  // --- Queues ---
   const activeQueue = queueIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as SongChoice[];
   
   const playedSongsList = songs
@@ -1221,7 +1244,6 @@ export default function App() {
                            const playedAt = song.playedAt || 0;
                            
                            // Allow rating if played AFTER arrival.
-                           // Use >= to be inclusive, though timestamps likely differ slightly.
                            const canRate = currentUser && (playedAt >= arrivalTime);
                            
                            const userRating = ratings.find(r => r.songChoiceId === song.id && r.userId === currentUser?.id);
@@ -1297,25 +1319,7 @@ export default function App() {
                        </div>
                        
                        {/* Language Balance Card */}
-                       <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
-                           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
-                           <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
-                           <div className="flex items-center gap-4 mt-1">
-                               <div>
-                                   <div className="text-lg font-bold text-white">{sessionSummary.languages.hebrew}</div>
-                                   <div className="text-[10px] text-jam-500 uppercase">Hebrew</div>
-                               </div>
-                               <div className="h-8 w-px bg-jam-700"></div>
-                               <div>
-                                   <div className="text-lg font-bold text-white">{sessionSummary.languages.english}</div>
-                                   <div className="text-[10px] text-jam-500 uppercase">English</div>
-                               </div>
-                           </div>
-                           <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden flex">
-                               <div className="h-full bg-purple-500 transition-all" style={{width: `${sessionSummary.languages.hebrewPct}%`}}></div>
-                               <div className="h-full bg-blue-500 transition-all" style={{width: `${sessionSummary.languages.englishPct}%`}}></div>
-                           </div>
-                       </div>
+                       <LanguageBalanceCard languages={sessionSummary.languages} />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1425,6 +1429,234 @@ export default function App() {
                  </div>
               )}
 
+              {/* History Tab */}
+              {statsTab === 'history' && (
+                  <div className="space-y-6 animate-fade-in">
+                      <div className="flex flex-col md:flex-row items-center gap-4 bg-jam-800/50 p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
+                          <div className="flex-1 w-full">
+                              <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
+                              <div className="relative">
+                                  <select 
+                                    value={historyDate} 
+                                    onChange={(e) => setHistoryDate(e.target.value)}
+                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-sm"
+                                  >
+                                      <option value="">-- Choose a session --</option>
+                                      {Object.keys(archives).sort().reverse().map(date => (
+                                          <option key={date} value={date}>{date}</option>
+                                      ))}
+                                  </select>
+                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
+                              </div>
+                          </div>
+                          {historyDate && (
+                              <button onClick={() => deleteHistorySession(historyDate)} className="p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
+                                  <Trash2 size={20} />
+                              </button>
+                          )}
+                      </div>
+
+                      {historyDate && (
+                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden shadow-2xl">
+                              <div className="bg-jam-900/80 p-4 border-b border-jam-700 flex justify-between items-center">
+                                  <h3 className="font-bold text-white flex items-center gap-2">
+                                      <Calendar size={18} className="text-orange-500" /> 
+                                      {historyDate}
+                                  </h3>
+                                  <span className="text-xs text-jam-400 bg-jam-800 px-2 py-1 rounded-lg border border-jam-700">{sessionDigest.length} Songs</span>
+                              </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
+                                    <thead className="bg-jam-900/50 text-jam-400 uppercase text-xs font-bold tracking-wider">
+                                        <tr>
+                                            <th className="p-4 w-24">Time</th>
+                                            <th className="p-4">Song Details</th>
+                                            <th className="p-4 w-32 text-right">Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-jam-700">
+                                        {sessionDigest.map((row) => (
+                                            <tr key={row.id} className="hover:bg-jam-700/30 transition-colors group">
+                                                <td className="p-4 font-mono text-jam-500 text-xs">
+                                                    {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-white group-hover:text-orange-400 transition-colors">{row.title}</div>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-jam-400 text-xs">{row.artist}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-jam-600"></span>
+                                                        <span className="text-jam-500 text-xs flex items-center gap-1">
+                                                            <div className="w-4 h-4 rounded-full bg-jam-700 flex items-center justify-center text-[8px] font-bold text-jam-300">
+                                                                {row.ownerName.charAt(0)}
+                                                            </div>
+                                                            {row.ownerName}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    {row.score > 0 ? (
+                                                        <span className={`inline-block px-2 py-1 rounded font-mono font-bold text-xs ${row.score >= 90 ? 'text-green-400 bg-green-500/10' : 'text-jam-300 bg-jam-700'}`}>
+                                                            {row.score}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-jam-600 text-xs">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                              </div>
+                          </div>
+                      )}
+                      
+                      {/* History Language Balance - Bottom of History */}
+                      {historyDate && (
+                          <div className="w-full md:w-1/2 mx-auto">
+                              <LanguageBalanceCard languages={sessionSummary.languages} />
+                          </div>
+                      )}
+                  </div>
+              )}
+
+              {/* Leaderboards Tab */}
+              {statsTab === 'leaderboards' && (
+                  <div className="space-y-8 animate-fade-in">
+                      
+                      {/* Top 3 Podium (Crowd Pleasers) */}
+                      <div className="relative pt-10 px-4">
+                         <h3 className="text-center font-bold text-white text-xl mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
+                             <Trophy size={24} className="text-yellow-500" />
+                             Crowd Pleasers
+                         </h3>
+                         {crowdPleasers.length > 0 ? (
+                             <div className="flex items-end justify-center gap-2 md:gap-6 mb-8">
+                                 {/* Silver */}
+                                 {crowdPleasers[1] && (
+                                     <div className="flex flex-col items-center w-1/3 max-w-[120px]">
+                                         <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[1].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-24 flex items-end justify-center pb-2 relative shadow-lg">
+                                             <div className="text-3xl font-bold text-gray-800 opacity-50">2</div>
+                                         </div>
+                                         <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-gray-500/50 text-xs font-mono text-gray-300">
+                                             {crowdPleasers[1].avgScore} pts
+                                         </div>
+                                     </div>
+                                 )}
+                                 {/* Gold */}
+                                 {crowdPleasers[0] && (
+                                     <div className="flex flex-col items-center w-1/3 max-w-[140px] z-10">
+                                          <div className="text-yellow-400 mb-2 animate-bounce"><Star size={20} fill="currentColor" /></div>
+                                         <div className="text-sm font-bold text-white mb-2">{crowdPleasers[0].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+                                             <div className="text-4xl font-bold text-yellow-800 opacity-50">1</div>
+                                         </div>
+                                         <div className="mt-2 bg-jam-800 px-4 py-1.5 rounded-full border border-yellow-500/50 text-sm font-bold font-mono text-yellow-400">
+                                             {crowdPleasers[0].avgScore} pts
+                                         </div>
+                                     </div>
+                                 )}
+                                 {/* Bronze */}
+                                 {crowdPleasers[2] && (
+                                     <div className="flex flex-col items-center w-1/3 max-w-[120px]">
+                                         <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[2].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-16 flex items-end justify-center pb-2 relative shadow-lg">
+                                             <div className="text-3xl font-bold text-orange-900 opacity-50">3</div>
+                                         </div>
+                                         <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-orange-700/50 text-xs font-mono text-orange-400">
+                                             {crowdPleasers[2].avgScore} pts
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
+                         ) : (
+                             <div className="text-center text-jam-500 italic py-8">Not enough data to determine crowd pleasers yet.</div>
+                         )}
+                         <div className="border-t border-jam-800"></div>
+                      </div>
+
+                       {/* Top Songs All Time */}
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                           <div className="flex items-center justify-between mb-6">
+                               <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                   <Star className="text-yellow-400" size={20} /> Hall of Fame
+                               </h3>
+                               <select 
+                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
+                                  value={leaderboardPerspective}
+                                  onChange={(e) => setLeaderboardPerspective(e.target.value)}
+                               >
+                                  <option value="all">Global Rank</option>
+                                  {ALL_USERS.map(u => (
+                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>Acc. to {u}</option>
+                                  ))}
+                               </select>
+                           </div>
+                           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+                               {leaderboard.length > 0 ? leaderboard.map((item, idx) => (
+                                   <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-4 transition-all">
+                                       <div className={`font-bold text-xl w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
+                                       <div className="flex-1 min-w-0">
+                                           <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
+                                           <div className="text-xs text-jam-400 truncate flex items-center gap-1">
+                                                {item.song.artist} <span className="text-jam-600">•</span> {item.song.ownerName}
+                                           </div>
+                                       </div>
+                                       <div className="flex flex-col items-end">
+                                            <div className="font-mono font-bold text-green-400 text-lg">{item.score}</div>
+                                            <div className="text-[9px] text-jam-500 uppercase">Points</div>
+                                       </div>
+                                   </div>
+                               )) : (
+                                   <div className="text-center text-jam-500 italic py-4">No songs rated yet.</div>
+                               )}
+                           </div>
+                       </div>
+
+                       {/* Language Breakdown per User */}
+                       {userLanguageStats.length > 0 && (
+                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                 <Languages className="text-purple-400" size={20} /> Language Distribution (All Time)
+                             </h3>
+                             <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                  <thead>
+                                     <tr className="text-jam-400 uppercase text-xs border-b border-jam-700">
+                                        <th className="pb-3 pl-2">User</th>
+                                        <th className="pb-3 text-center">Songs</th>
+                                        <th className="pb-3 text-center">Hebrew</th>
+                                        <th className="pb-3 text-center">English</th>
+                                        <th className="pb-3 w-32">Ratio</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-jam-800">
+                                    {userLanguageStats.map(stat => (
+                                        <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
+                                           <td className="py-3 pl-2 font-medium text-white">{stat.name}</td>
+                                           <td className="py-3 text-center text-jam-300">{stat.total}</td>
+                                           <td className="py-3 text-center text-jam-300">
+                                              {stat.hebrew} <span className="text-[10px] text-jam-500">({stat.hebrewPct}%)</span>
+                                           </td>
+                                           <td className="py-3 text-center text-jam-300">
+                                              {stat.english} <span className="text-[10px] text-jam-500">({stat.englishPct}%)</span>
+                                           </td>
+                                           <td className="py-3">
+                                              <div className="flex h-2 rounded-full overflow-hidden w-full bg-jam-900">
+                                                 <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500"></div>
+                                                 <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500"></div>
+                                              </div>
+                                           </td>
+                                        </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                             </div>
+                          </div>
+                       )}
+                  </div>
+              )}
+
               {/* Taste Buds Tab */}
               {statsTab === 'taste' && (
                   <div className="space-y-8 animate-fade-in">
@@ -1475,7 +1707,7 @@ export default function App() {
 
                        <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                               <Heart className="text-red-400" size={20} /> Musical Soulmates
+                               <Heart className="text-red-400" size={20} /> Musical Soulmates (All Time)
                            </h3>
                            <p className="text-sm text-jam-400 mb-6">These pairs have the most similar taste in music based on voting.</p>
                            
