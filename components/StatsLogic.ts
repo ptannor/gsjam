@@ -226,3 +226,37 @@ export const getCrowdPleasers = (songs: SongChoice[], ratings: Rating[]) => {
         }))
         .sort((a, b) => b.avgScore - a.avgScore);
 };
+
+export const getBiggestThieves = (songs: SongChoice[]) => {
+    const theftCounts: Record<string, number> = {};
+    
+    songs.forEach(s => {
+        if (s.isStolen) {
+            // Count theft against the song owner (they benefited from the steal)
+            const name = s.ownerName;
+            theftCounts[name] = (theftCounts[name] || 0) + 1;
+        }
+    });
+
+    return Object.entries(theftCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count }));
+};
+
+export const getUserRatingHistory = (userId: string, ratings: Rating[], songs: SongChoice[]) => {
+    // 1. Find all ratings by this user
+    const userRatings = ratings.filter(r => r.userId === userId);
+    
+    // 2. Map to song details
+    return userRatings.map(r => {
+        const song = songs.find(s => s.id === r.songChoiceId);
+        if (!song) return null;
+        return {
+            rating: r.value,
+            songTitle: song.title,
+            songArtist: song.artist,
+            performer: song.ownerName,
+            playedAt: song.playedAt
+        };
+    }).filter(Boolean).sort((a, b) => (b!.playedAt || 0) - (a!.playedAt || 0));
+};
