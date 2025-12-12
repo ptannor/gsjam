@@ -23,14 +23,14 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive, Link as LinkIcon, Menu, Settings
+  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive, Link as LinkIcon, Menu, Settings, Languages
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
 import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
-import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong, getBiggestThieves, getUserRatingHistory } from './components/StatsLogic';
+import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong, getBiggestThieves, getUserRatingHistory, getUserLanguageStats } from './components/StatsLogic';
 import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, push, remove, update } from './services/firebase';
 
 // --- Utility Functions ---
@@ -309,6 +309,13 @@ export default function App() {
       console.warn("Firebase configuration missing or invalid in constants.ts. Falling back to local storage.");
     }
   }, []);
+
+  // Set default history user when user logs in
+  useEffect(() => {
+    if (currentUser && !rankingHistoryUser) {
+        setRankingHistoryUser(currentUser.id);
+    }
+  }, [currentUser]);
 
   // 2. Data Synchronization (Hybrid: LocalStorage or Firebase)
   useEffect(() => {
@@ -885,6 +892,11 @@ export default function App() {
       return getUserRatingHistory(rankingHistoryUser, uniqueRatings, uniqueSongs);
   }, [rankingHistoryUser, songs, ratings, archives]);
 
+  const userLanguageStats = useMemo(() => {
+    // Only calculate for active tab data
+    return getUserLanguageStats(activeStatsSongs);
+  }, [activeStatsSongs]);
+
   const activeQueue = queueIds.map(id => songs.find(s => s.id === id)).filter(Boolean) as SongChoice[];
   
   const playedSongsList = songs
@@ -1205,7 +1217,7 @@ export default function App() {
                  <div className="animate-fade-in space-y-8">
                     
                     {/* Session Pulse Dashboard - NEW */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                        <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
                            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Music size={64} /></div>
                            <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Total Songs</div>
@@ -1229,7 +1241,28 @@ export default function App() {
                            <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Mic2 size={64} className="text-blue-500"/></div>
                            <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">MVP</div>
                            <div className="text-xl font-bold text-white truncate">{sessionSummary.topContributor}</div>
-                           <div className="text-xs text-jam-500 mt-2">Most songs played tonight</div>
+                           <div className="text-xs text-jam-500 mt-2">Most songs played</div>
+                       </div>
+                       
+                       {/* Language Balance Card */}
+                       <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
+                           <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
+                           <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
+                           <div className="flex items-center gap-4 mt-1">
+                               <div>
+                                   <div className="text-lg font-bold text-white">{sessionSummary.languages.hebrew}</div>
+                                   <div className="text-[10px] text-jam-500 uppercase">Hebrew</div>
+                               </div>
+                               <div className="h-8 w-px bg-jam-700"></div>
+                               <div>
+                                   <div className="text-lg font-bold text-white">{sessionSummary.languages.english}</div>
+                                   <div className="text-[10px] text-jam-500 uppercase">English</div>
+                               </div>
+                           </div>
+                           <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden flex">
+                               <div className="h-full bg-purple-500 transition-all" style={{width: `${sessionSummary.languages.hebrewPct}%`}}></div>
+                               <div className="h-full bg-blue-500 transition-all" style={{width: `${sessionSummary.languages.englishPct}%`}}></div>
+                           </div>
                        </div>
                     </div>
 
@@ -1509,6 +1542,48 @@ export default function App() {
                                ))}
                            </div>
                        </div>
+
+                       {/* Language Breakdown per User */}
+                       {userLanguageStats.length > 0 && (
+                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
+                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                 <Languages className="text-purple-400" size={20} /> Language Distribution
+                             </h3>
+                             <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                  <thead>
+                                     <tr className="text-jam-400 uppercase text-xs border-b border-jam-700">
+                                        <th className="pb-3 pl-2">User</th>
+                                        <th className="pb-3 text-center">Songs</th>
+                                        <th className="pb-3 text-center">Hebrew</th>
+                                        <th className="pb-3 text-center">English</th>
+                                        <th className="pb-3 w-32">Ratio</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-jam-800">
+                                    {userLanguageStats.map(stat => (
+                                        <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
+                                           <td className="py-3 pl-2 font-medium text-white">{stat.name}</td>
+                                           <td className="py-3 text-center text-jam-300">{stat.total}</td>
+                                           <td className="py-3 text-center text-jam-300">
+                                              {stat.hebrew} <span className="text-[10px] text-jam-500">({stat.hebrewPct}%)</span>
+                                           </td>
+                                           <td className="py-3 text-center text-jam-300">
+                                              {stat.english} <span className="text-[10px] text-jam-500">({stat.englishPct}%)</span>
+                                           </td>
+                                           <td className="py-3">
+                                              <div className="flex h-2 rounded-full overflow-hidden w-full bg-jam-900">
+                                                 <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500"></div>
+                                                 <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500"></div>
+                                              </div>
+                                           </td>
+                                        </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                             </div>
+                          </div>
+                       )}
                   </div>
               )}
 
@@ -1544,7 +1619,7 @@ export default function App() {
                                            <div key={idx} className="bg-jam-900/50 p-3 rounded-lg border border-jam-800 flex items-center justify-between">
                                                 <div className="flex-1 min-w-0 mr-4">
                                                     <div className="text-sm font-bold text-white truncate">{item.songTitle}</div>
-                                                    <div className="text-xs text-jam-400 truncate">Performer: {item.performer}</div>
+                                                    <div className="text-xs text-jam-400 truncate">Selected by: {item.performer}</div>
                                                     {item.playedAt && <div className="text-[10px] text-jam-500 mt-1">{new Date(item.playedAt).toLocaleDateString()}</div>}
                                                 </div>
                                                 <div className={`px-2 py-1 rounded text-xs font-bold ${item.rating === 'Highlight' ? 'bg-green-500/20 text-green-400' : item.rating === 'Sababa' ? 'bg-yellow-500/20 text-yellow-400' : item.rating === 'Needs work' ? 'bg-red-500/20 text-red-400' : 'bg-jam-700 text-jam-300'}`}>

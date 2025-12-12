@@ -23,11 +23,29 @@ export interface UserSimilarity {
   commonSongs: number;
 }
 
+export interface LanguageStats {
+  hebrew: number;
+  english: number; // Actually Non-Hebrew
+  hebrewPct: number;
+  englishPct: number;
+}
+
 export interface SessionSummary {
   totalSongs: number;
   totalDurationMin: number; // Estimate
   vibeScore: number; // Avg of all ratings
   topContributor: string;
+  languages: LanguageStats;
+}
+
+export interface UserLanguageStat {
+  userId: string;
+  name: string;
+  total: number;
+  hebrew: number;
+  english: number;
+  hebrewPct: number;
+  englishPct: number;
 }
 
 // --- Helpers ---
@@ -42,11 +60,42 @@ const getRatingValue = (r: Rating['value']): number => {
   }
 };
 
+const isHebrew = (text: string): boolean => {
+  // Unicode range for Hebrew
+  return /[\u0590-\u05FF]/.test(text || '');
+};
+
 // --- Core Logic ---
 
 export const getSessionSummary = (songs: SongChoice[], ratings: Rating[]): SessionSummary => {
   const played = songs.filter(s => s.playStatus === 'played');
-  if (played.length === 0) return { totalSongs: 0, totalDurationMin: 0, vibeScore: 0, topContributor: '-' };
+  
+  // Language Stats
+  let hebrewCount = 0;
+  let englishCount = 0;
+  played.forEach(s => {
+      if (isHebrew(s.title) || isHebrew(s.artist)) {
+          hebrewCount++;
+      } else {
+          englishCount++;
+      }
+  });
+  const total = hebrewCount + englishCount; // Should equal played.length
+  
+  const languages: LanguageStats = {
+      hebrew: hebrewCount,
+      english: englishCount,
+      hebrewPct: total > 0 ? Math.round((hebrewCount / total) * 100) : 0,
+      englishPct: total > 0 ? Math.round((englishCount / total) * 100) : 0
+  };
+
+  if (played.length === 0) return { 
+      totalSongs: 0, 
+      totalDurationMin: 0, 
+      vibeScore: 0, 
+      topContributor: '-',
+      languages
+  };
 
   // Calculate Average Vibe
   let totalRatingVal = 0;
@@ -82,7 +131,8 @@ export const getSessionSummary = (songs: SongChoice[], ratings: Rating[]): Sessi
     totalSongs: played.length,
     totalDurationMin: played.length * 4, // Approx 4 mins per song
     vibeScore,
-    topContributor
+    topContributor,
+    languages
   };
 };
 
@@ -264,4 +314,33 @@ export const getUserRatingHistory = (userId: string, ratings: Rating[], songs: S
     return mapped
         .filter((item): item is NonNullable<typeof item> => item !== null)
         .sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0));
+};
+
+export const getUserLanguageStats = (songs: SongChoice[]): UserLanguageStat[] => {
+    const stats = new Map<string, { hebrew: number; english: number; name: string }>();
+
+    songs.filter(s => s.playStatus === 'played').forEach(s => {
+        if (!stats.has(s.ownerUserId)) {
+            stats.set(s.ownerUserId, { hebrew: 0, english: 0, name: s.ownerName });
+        }
+        const current = stats.get(s.ownerUserId)!;
+        if (isHebrew(s.title) || isHebrew(s.artist)) {
+            current.hebrew++;
+        } else {
+            current.english++;
+        }
+    });
+
+    return Array.from(stats.entries()).map(([userId, data]) => {
+        const total = data.hebrew + data.english;
+        return {
+            userId,
+            name: data.name,
+            total,
+            hebrew: data.hebrew,
+            english: data.english,
+            hebrewPct: total > 0 ? Math.round((data.hebrew / total) * 100) : 0,
+            englishPct: total > 0 ? Math.round((data.english / total) * 100) : 0,
+        };
+    }).sort((a, b) => b.total - a.total);
 };
