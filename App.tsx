@@ -23,7 +23,8 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap, Flame, TrendingUp, Sparkles, Mic2, Database, Archive, Link as LinkIcon, Languages, Globe
+  Zap, Flame, TrendingUp, Sparkles, Mic2, Database, Archive, Link as LinkIcon, Languages, Globe,
+  ThumbsUp
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -1377,284 +1378,10 @@ export default function App() {
                  </div>
               )}
 
-              {/* History Tab */}
-              {statsTab === 'history' && (
-                  <div className="space-y-6 animate-fade-in">
-                      <div className="flex flex-col md:flex-row items-center gap-4 bg-jam-800/50 p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
-                          <div className="flex-1 w-full">
-                              <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
-                              <div className="relative">
-                                  <select 
-                                    value={historyDate} 
-                                    onChange={(e) => setHistoryDate(e.target.value)}
-                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-sm"
-                                  >
-                                      <option value="">-- Choose a session --</option>
-                                      {Object.keys(archives).sort().reverse().map(date => (
-                                          <option key={date} value={date}>{date}</option>
-                                      ))}
-                                  </select>
-                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
-                              </div>
-                          </div>
-                          {historyDate && (
-                              <button onClick={() => deleteHistorySession(historyDate)} className="p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
-                                  <Trash2 size={20} />
-                              </button>
-                          )}
-                      </div>
-
-                      {historyDate && (
-                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden shadow-2xl">
-                              <div className="bg-jam-900/80 p-4 border-b border-jam-700 flex justify-between items-center">
-                                  <h3 className="font-bold text-white flex items-center gap-2">
-                                      <Calendar size={18} className="text-orange-500" /> 
-                                      {historyDate}
-                                  </h3>
-                                  <span className="text-xs text-jam-400 bg-jam-800 px-2 py-1 rounded-lg border border-jam-700">{sessionDigest.length} Songs</span>
-                              </div>
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
-                                    <thead className="bg-jam-900/50 text-jam-400 uppercase text-xs font-bold tracking-wider">
-                                        <tr>
-                                            <th className="p-4 w-24">Time</th>
-                                            <th className="p-4">Song Details</th>
-                                            <th className="p-4 w-32 text-right">Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-jam-700">
-                                        {sessionDigest.map((row) => (
-                                            <tr key={row.id} className="hover:bg-jam-700/30 transition-colors group">
-                                                <td className="p-4 font-mono text-jam-500 text-xs">
-                                                    {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="font-bold text-white group-hover:text-orange-400 transition-colors">{row.title}</div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-jam-400 text-xs">{row.artist}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-jam-600"></span>
-                                                        <span className="text-jam-500 text-xs flex items-center gap-1">
-                                                            <div className="w-4 h-4 rounded-full bg-jam-700 flex items-center justify-center text-[8px] font-bold text-jam-300">
-                                                                {row.ownerName.charAt(0)}
-                                                            </div>
-                                                            {row.ownerName}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    {row.score > 0 ? (
-                                                        <span className={`inline-block px-2 py-1 rounded font-mono font-bold text-xs ${row.score >= 90 ? 'text-green-400 bg-green-500/10' : 'text-jam-300 bg-jam-700'}`}>
-                                                            {row.score}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-jam-600 text-xs">-</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              )}
-
-              {/* Leaderboards Tab */}
-              {statsTab === 'leaderboards' && (
-                  <div className="space-y-8 animate-fade-in">
-                      
-                      {/* Top 3 Podium (Crowd Pleasers) */}
-                      <div className="relative pt-10 px-4">
-                         <h3 className="text-center font-bold text-white text-xl mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
-                             <Trophy size={24} className="text-yellow-500" />
-                             Crowd Pleasers
-                         </h3>
-                         <div className="flex items-end justify-center gap-2 md:gap-6 mb-8">
-                             {/* Silver */}
-                             {crowdPleasers[1] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[1].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-24 flex items-end justify-center pb-2 relative shadow-lg">
-                                         <div className="text-3xl font-bold text-gray-800 opacity-50">2</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-gray-500/50 text-xs font-mono text-gray-300">
-                                         {crowdPleasers[1].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                             {/* Gold */}
-                             {crowdPleasers[0] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[140px] z-10">
-                                      <div className="text-yellow-400 mb-2 animate-bounce"><Star size={20} fill="currentColor" /></div>
-                                     <div className="text-sm font-bold text-white mb-2">{crowdPleasers[0].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
-                                         <div className="text-4xl font-bold text-yellow-800 opacity-50">1</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-4 py-1.5 rounded-full border border-yellow-500/50 text-sm font-bold font-mono text-yellow-400">
-                                         {crowdPleasers[0].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                             {/* Bronze */}
-                             {crowdPleasers[2] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[2].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-16 flex items-end justify-center pb-2 relative shadow-lg">
-                                         <div className="text-3xl font-bold text-orange-900 opacity-50">3</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-orange-700/50 text-xs font-mono text-orange-400">
-                                         {crowdPleasers[2].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                         </div>
-                         <div className="border-t border-jam-800"></div>
-                      </div>
-
-                       {/* Top Songs All Time */}
-                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                           <div className="flex items-center justify-between mb-6">
-                               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                   <Star className="text-yellow-400" size={20} /> Hall of Fame
-                               </h3>
-                               <select 
-                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
-                                  value={leaderboardPerspective}
-                                  onChange={(e) => setLeaderboardPerspective(e.target.value)}
-                               >
-                                  <option value="all">Global Rank</option>
-                                  {ALL_USERS.map(u => (
-                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>Acc. to {u}</option>
-                                  ))}
-                               </select>
-                           </div>
-                           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
-                               {leaderboard.map((item, idx) => (
-                                   <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-4 transition-all">
-                                       <div className={`font-bold text-xl w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
-                                       <div className="flex-1 min-w-0">
-                                           <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
-                                           <div className="text-xs text-jam-400 truncate flex items-center gap-1">
-                                                {item.song.artist} <span className="text-jam-600">•</span> {item.song.ownerName}
-                                           </div>
-                                       </div>
-                                       <div className="flex flex-col items-end">
-                                            <div className="font-mono font-bold text-green-400 text-lg">{item.score}</div>
-                                            <div className="text-[9px] text-jam-500 uppercase">Points</div>
-                                       </div>
-                                   </div>
-                               ))}
-                           </div>
-                       </div>
-
-                       {/* Language Breakdown per User */}
-                       {userLanguageStats.length > 0 && (
-                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                 <Languages className="text-purple-400" size={20} /> Language Distribution
-                             </h3>
-                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                  <thead>
-                                     <tr className="text-jam-400 uppercase text-xs border-b border-jam-700">
-                                        <th className="pb-3 pl-2">User</th>
-                                        <th className="pb-3 text-center">Songs</th>
-                                        <th className="pb-3 text-center">Hebrew</th>
-                                        <th className="pb-3 text-center">English</th>
-                                        <th className="pb-3 w-32">Ratio</th>
-                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-jam-800">
-                                    {userLanguageStats.map(stat => (
-                                        <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
-                                           <td className="py-3 pl-2 font-medium text-white">{stat.name}</td>
-                                           <td className="py-3 text-center text-jam-300">{stat.total}</td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.hebrew} <span className="text-[10px] text-jam-500">({stat.hebrewPct}%)</span>
-                                           </td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.english} <span className="text-[10px] text-jam-500">({stat.englishPct}%)</span>
-                                           </td>
-                                           <td className="py-3">
-                                              <div className="flex h-2 rounded-full overflow-hidden w-full bg-jam-900">
-                                                 <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500"></div>
-                                                 <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500"></div>
-                                              </div>
-                                           </td>
-                                        </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                             </div>
-                          </div>
-                       )}
-                  </div>
-              )}
-
               {/* Taste Buds Tab */}
               {statsTab === 'taste' && (
                   <div className="space-y-8 animate-fade-in">
                        
-                       {/* Language Groups: Hebrew Lovers vs English Lovers */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {/* Hebrew Team */}
-                           <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
-                               <div className="absolute top-0 right-0 p-4 opacity-10"><Languages size={64} className="text-purple-500" /></div>
-                               <h3 className="text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">
-                                   🇮🇱 Hebrew Lovers
-                               </h3>
-                               <div className="space-y-3 relative z-10">
-                                   {languagePreferences.hebrewLovers.length > 0 ? languagePreferences.hebrewLovers.map(user => (
-                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-purple-500/20">
-                                           <div className="flex justify-between items-center mb-2">
-                                               <span className="font-bold text-white">{user.userName}</span>
-                                               <span className="text-xs font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">{(user.hebrewRatio * 100).toFixed(0)}% Hebrew</span>
-                                           </div>
-                                           <div className="flex gap-2 text-xs">
-                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-purple-900/50">
-                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🇮🇱</div>
-                                                   <div className="font-bold text-purple-400 text-sm">{user.avgRatingGivenToHebrew}</div>
-                                               </div>
-                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-jam-800">
-                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🌎</div>
-                                                   <div className="font-bold text-blue-400 text-sm">{user.avgRatingGivenToEnglish}</div>
-                                               </div>
-                                           </div>
-                                       </div>
-                                   )) : <div className="text-sm text-jam-500 italic">No one prefers Hebrew songs yet.</div>}
-                               </div>
-                           </div>
-
-                           {/* English Team */}
-                           <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-5 relative overflow-hidden">
-                               <div className="absolute top-0 right-0 p-4 opacity-10"><Globe size={64} className="text-blue-500" /></div>
-                               <h3 className="text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">
-                                   🌎 English Lovers
-                               </h3>
-                               <div className="space-y-3 relative z-10">
-                                   {languagePreferences.englishLovers.length > 0 ? languagePreferences.englishLovers.map(user => (
-                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-blue-500/20">
-                                           <div className="flex justify-between items-center mb-2">
-                                               <span className="font-bold text-white">{user.userName}</span>
-                                               <span className="text-xs font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">{((1 - user.hebrewRatio) * 100).toFixed(0)}% English</span>
-                                           </div>
-                                           <div className="flex gap-2 text-xs">
-                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-jam-800">
-                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🇮🇱</div>
-                                                   <div className="font-bold text-purple-400 text-sm">{user.avgRatingGivenToHebrew}</div>
-                                               </div>
-                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-blue-900/50">
-                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🌎</div>
-                                                   <div className="font-bold text-blue-400 text-sm">{user.avgRatingGivenToEnglish}</div>
-                                               </div>
-                                           </div>
-                                       </div>
-                                   )) : <div className="text-sm text-jam-500 italic">No one prefers English songs yet.</div>}
-                               </div>
-                           </div>
-                       </div>
-
                        {/* User Ratings History Section */}
                        <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -1757,6 +1484,78 @@ export default function App() {
                                 </div>
                             </div>
                        )}
+
+                       {/* Language Groups: Hebrew Lovers vs English Lovers - MOVED TO BOTTOM */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           {/* Hebrew Team */}
+                           <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
+                               <div className="absolute top-0 right-0 p-4 opacity-10"><Languages size={64} className="text-purple-500" /></div>
+                               <h3 className="text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">
+                                   🇮🇱 Hebrew Lovers
+                               </h3>
+                               <div className="space-y-3 relative z-10">
+                                   {languagePreferences.hebrewLovers.length > 0 ? languagePreferences.hebrewLovers.map(user => (
+                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-purple-500/20">
+                                           <div className="font-bold text-white mb-2">{user.userName}</div>
+                                           <div className="grid grid-cols-2 gap-2 text-xs">
+                                                {/* Selections Column */}
+                                                <div className="bg-jam-950 rounded p-2 border border-purple-900/50 flex flex-col items-center justify-center">
+                                                    <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Selection</div>
+                                                    <div className="text-purple-300 font-bold text-sm">{(user.hebrewRatio * 100).toFixed(0)}% Heb</div>
+                                                    <div className="text-jam-600 text-[9px] mt-0.5">{user.hebrewSongsChosen}h / {user.englishSongsChosen}e</div>
+                                                </div>
+                                                
+                                                {/* Ratings Column */}
+                                                <div className="bg-jam-950 rounded p-2 border border-jam-800 flex flex-col items-center justify-center">
+                                                    <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Rating Pref</div>
+                                                    <div className="flex gap-2 text-xs font-bold">
+                                                        <span className="text-purple-400">{user.avgRatingGivenToHebrew}</span>
+                                                        <span className="text-jam-600">vs</span>
+                                                        <span className="text-blue-400">{user.avgRatingGivenToEnglish}</span>
+                                                    </div>
+                                                    <div className="text-jam-600 text-[9px] mt-0.5">Heb vs Eng</div>
+                                                </div>
+                                           </div>
+                                       </div>
+                                   )) : <div className="text-sm text-jam-500 italic">No one prefers Hebrew songs yet.</div>}
+                               </div>
+                           </div>
+
+                           {/* English Team */}
+                           <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-5 relative overflow-hidden">
+                               <div className="absolute top-0 right-0 p-4 opacity-10"><Globe size={64} className="text-blue-500" /></div>
+                               <h3 className="text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">
+                                   🌎 English Lovers
+                               </h3>
+                               <div className="space-y-3 relative z-10">
+                                   {languagePreferences.englishLovers.length > 0 ? languagePreferences.englishLovers.map(user => (
+                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-blue-500/20">
+                                           <div className="font-bold text-white mb-2">{user.userName}</div>
+                                           <div className="grid grid-cols-2 gap-2 text-xs">
+                                                {/* Selections Column */}
+                                                <div className="bg-jam-950 rounded p-2 border border-blue-900/50 flex flex-col items-center justify-center">
+                                                    <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Selection</div>
+                                                    <div className="text-blue-300 font-bold text-sm">{((1 - user.hebrewRatio) * 100).toFixed(0)}% Eng</div>
+                                                    <div className="text-jam-600 text-[9px] mt-0.5">{user.englishSongsChosen}e / {user.hebrewSongsChosen}h</div>
+                                                </div>
+                                                
+                                                {/* Ratings Column */}
+                                                <div className="bg-jam-950 rounded p-2 border border-jam-800 flex flex-col items-center justify-center">
+                                                    <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Rating Pref</div>
+                                                    <div className="flex gap-2 text-xs font-bold">
+                                                        <span className="text-blue-400">{user.avgRatingGivenToEnglish}</span>
+                                                        <span className="text-jam-600">vs</span>
+                                                        <span className="text-purple-400">{user.avgRatingGivenToHebrew}</span>
+                                                    </div>
+                                                    <div className="text-jam-600 text-[9px] mt-0.5">Eng vs Heb</div>
+                                                </div>
+                                           </div>
+                                       </div>
+                                   )) : <div className="text-sm text-jam-500 italic">No one prefers English songs yet.</div>}
+                               </div>
+                           </div>
+                       </div>
+
                   </div>
               )}
 

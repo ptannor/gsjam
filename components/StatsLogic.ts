@@ -365,9 +365,10 @@ export const getLanguagePreferences = (songs: SongChoice[], ratings: Rating[]) =
     });
 
     // 2. Aggregate User Choices (What they chose)
+    // CHANGE: Include ALL songs (queued or played) to get better data on "Selections"
     const userChoices = new Map<string, {name: string, hebrew: number, english: number}>();
     
-    songs.filter(s => s.playStatus === 'played').forEach(s => {
+    songs.forEach(s => {
         if (!userChoices.has(s.ownerUserId)) {
             userChoices.set(s.ownerUserId, { name: s.ownerName, hebrew: 0, english: 0 });
         }
@@ -405,7 +406,7 @@ export const getLanguagePreferences = (songs: SongChoice[], ratings: Rating[]) =
     const results: UserLanguagePreference[] = [];
     userChoices.forEach((choiceData, userId) => {
         const total = choiceData.hebrew + choiceData.english;
-        // Include everyone who played at least one song
+        // Include everyone who chose at least one song
         if (total === 0) return;
         
         const ratingData = userRatings.get(userId) || { hebrewSum: 0, hebrewCount: 0, englishSum: 0, englishCount: 0 };
