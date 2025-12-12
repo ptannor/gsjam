@@ -872,7 +872,8 @@ export default function App() {
       let allHistorySongs = [...songs];
       let allHistoryRatings = [...ratings];
       
-      Object.values(archives).forEach(arch => {
+      // Fix: Cast the output of Object.values to avoid 'unknown' type error in strict mode
+      (Object.values(archives) as ArchivedSessionData[]).forEach(arch => {
           allHistorySongs = [...allHistorySongs, ...arch.songs];
           allHistoryRatings = [...allHistoryRatings, ...arch.ratings];
       });
