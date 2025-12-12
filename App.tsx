@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
-import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult } from './types';
+import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult, RatingValue } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
 import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences } from './components/StatsLogic';
@@ -130,10 +130,11 @@ interface SortableSongItemProps {
   isCurrent: boolean;
   onViewImage?: (url: string) => void;
   onRate?: () => void;
+  existingRatingValue?: RatingValue;
 }
 
 const SortableSongItem: React.FC<SortableSongItemProps> = ({ 
-  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage, onRate
+  song, index, participant, onMarkPlaying, onMarkPlayed, onDelete, onRevive, onEdit, onUnsteal, isCurrent, onViewImage, onRate, existingRatingValue
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: song.id });
   
@@ -143,6 +144,9 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
   };
 
   const isPlayed = song.playStatus === 'played';
+
+  // Helper to find rating details
+  const getRatingDetails = (val: RatingValue) => RATING_OPTIONS.find(o => o.value === val);
 
   return (
     <div ref={setNodeRef} style={style} className={`relative mb-3 group ${isPlayed ? 'opacity-80' : ''}`}>
@@ -204,11 +208,30 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
             </button>
           )}
 
-          {/* Rate Button for Played Songs (Retroactive) */}
-          {isPlayed && onRate && (
-             <button onClick={onRate} className="p-2 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-full transition-all" title="Rate this song">
-               <Star size={18} />
-             </button>
+          {/* Rate Button Logic: Show Badge if rated, Star if allowed, Clock if missed */}
+          {isPlayed && (
+             <>
+                {existingRatingValue ? (
+                   // Existing Rating - Click to Edit
+                   <button 
+                      onClick={onRate} 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border bg-jam-900/50 hover:bg-jam-800 transition-all flex items-center gap-1 ${getRatingDetails(existingRatingValue)?.color} border-current`} 
+                      title="Change Rating"
+                   >
+                      {getRatingDetails(existingRatingValue)?.label}
+                   </button>
+                ) : onRate ? (
+                   // Can Rate
+                   <button onClick={onRate} className="p-2 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-full transition-all" title="Rate this song">
+                     <Star size={18} />
+                   </button>
+                ) : (
+                   // Cannot Rate (Played before arrival)
+                   <div className="p-2 text-jam-700 cursor-not-allowed opacity-50" title="Played before you arrived">
+                      <Clock size={18} />
+                   </div>
+                )}
+             </>
           )}
 
           {/* Edit Button */}
@@ -784,13 +807,26 @@ export default function App() {
 
   const submitRating = (val: Rating['value']) => {
     if (!showRatingModal || !currentUser) return;
-    const rating: Rating = {
-      id: generateId(),
-      songChoiceId: showRatingModal.id,
-      userId: currentUser.id,
-      value: val
-    };
-    const newRatings = [...ratings, rating];
+    
+    // Check if user already rated this song
+    const existingIdx = ratings.findIndex(r => r.songChoiceId === showRatingModal.id && r.userId === currentUser.id);
+    let newRatings;
+
+    if (existingIdx >= 0) {
+        // Update existing rating
+        newRatings = [...ratings];
+        newRatings[existingIdx] = { ...newRatings[existingIdx], value: val };
+    } else {
+        // Create new rating
+        const rating: Rating = {
+            id: generateId(),
+            songChoiceId: showRatingModal.id,
+            userId: currentUser.id,
+            value: val
+        };
+        newRatings = [...ratings, rating];
+    }
+    
     setRatings(newRatings);
     updateData('ratings', newRatings);
     setShowRatingModal(null);
@@ -1176,9 +1212,19 @@ export default function App() {
                     </h3>
                     <div className="space-y-3 opacity-80">
                         {playedSongsList.map((song, index) => {
-                           // Check if current user has rated this song
-                           // If currentUser is not set (rare, but possible if viewing page without logging in), assume false
-                           const hasRated = currentUser ? ratings.some(r => r.songChoiceId === song.id && r.userId === currentUser.id) : true;
+                           // Logic for Ratings:
+                           // 1. Can only rate if song was played AFTER user arrived.
+                           // 2. Can edit existing rating.
+                           
+                           const userParticipant = participants.find(p => p.userId === currentUser?.id);
+                           const arrivalTime = userParticipant?.arrivalTime || 0;
+                           const playedAt = song.playedAt || 0;
+                           
+                           // Allow rating if played AFTER arrival.
+                           // Use >= to be inclusive, though timestamps likely differ slightly.
+                           const canRate = currentUser && (playedAt >= arrivalTime);
+                           
+                           const userRating = ratings.find(r => r.songChoiceId === song.id && r.userId === currentUser?.id);
 
                            return (
                                <SortableSongItem
@@ -1188,8 +1234,9 @@ export default function App() {
                                   isCurrent={false}
                                   onRevive={() => reviveSong(song.id)}
                                   onViewImage={(url) => setViewingImage(url)}
-                                  // Show rate button if logged in and not rated
-                                  onRate={(!hasRated && currentUser) ? () => setShowRatingModal(song) : undefined}
+                                  // Pass onRate only if allowed to rate (or edit)
+                                  onRate={canRate ? () => setShowRatingModal(song) : undefined}
+                                  existingRatingValue={userRating?.value}
                                />
                            );
                         })}
