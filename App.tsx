@@ -807,13 +807,12 @@ export default function App() {
 
   // --- Derived Stats Data ---
   const statsDataset = useMemo(() => {
-    if (statsTab === 'today') {
-        return { participants, songs, ratings };
-    }
+    // History Tab: Use archived data
     if (statsTab === 'history' && historyDate && archives[historyDate]) {
         return archives[historyDate];
     }
-    return { participants: [], songs: [], ratings: [] };
+    // Default (Today, Leaderboards, Taste): Use current session data
+    return { participants, songs, ratings };
   }, [statsTab, historyDate, archives, participants, songs, ratings]);
 
   const { participants: activeStatsParticipants, songs: activeStatsSongs, ratings: activeStatsRatings } = statsDataset;
