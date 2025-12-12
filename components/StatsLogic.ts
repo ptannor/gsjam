@@ -48,9 +48,21 @@ export interface UserLanguageStat {
   englishPct: number;
 }
 
+export interface UserLanguagePreference {
+  userId: string;
+  userName: string;
+  totalSongsChosen: number;
+  hebrewSongsChosen: number;
+  englishSongsChosen: number;
+  hebrewRatio: number;
+  avgRatingGivenToHebrew: number;
+  avgRatingGivenToEnglish: number;
+  group: 'Hebrew' | 'English';
+}
+
 // --- Helpers ---
 
-const getRatingValue = (r: Rating['value']): number => {
+export const getRatingValue = (r: Rating['value']): number => {
   switch (r) {
     case 'Highlight': return 100;
     case 'Sababa': return 75; // Sababa is good!
@@ -60,7 +72,7 @@ const getRatingValue = (r: Rating['value']): number => {
   }
 };
 
-const isHebrew = (text: string): boolean => {
+export const isHebrew = (text: string): boolean => {
   // Unicode range for Hebrew
   return /[\u0590-\u05FF]/.test(text || '');
 };
@@ -343,4 +355,83 @@ export const getUserLanguageStats = (songs: SongChoice[]): UserLanguageStat[] =>
             englishPct: total > 0 ? Math.round((data.english / total) * 100) : 0,
         };
     }).sort((a, b) => b.total - a.total);
+};
+
+export const getLanguagePreferences = (songs: SongChoice[], ratings: Rating[]) => {
+    // 1. Identify Song Languages
+    const songLangs = new Map<string, 'Hebrew' | 'English'>();
+    songs.forEach(s => {
+        songLangs.set(s.id, (isHebrew(s.title) || isHebrew(s.artist)) ? 'Hebrew' : 'English');
+    });
+
+    // 2. Aggregate User Choices (What they chose)
+    const userChoices = new Map<string, {name: string, hebrew: number, english: number}>();
+    
+    songs.filter(s => s.playStatus === 'played').forEach(s => {
+        if (!userChoices.has(s.ownerUserId)) {
+            userChoices.set(s.ownerUserId, { name: s.ownerName, hebrew: 0, english: 0 });
+        }
+        const entry = userChoices.get(s.ownerUserId)!;
+        if (songLangs.get(s.id) === 'Hebrew') entry.hebrew++;
+        else entry.english++;
+    });
+
+    // 3. Aggregate User Ratings Given (How they rated others)
+    const userRatings = new Map<string, { 
+        hebrewSum: number, hebrewCount: number, 
+        englishSum: number, englishCount: number 
+    }>();
+
+    ratings.forEach(r => {
+        const lang = songLangs.get(r.songChoiceId);
+        if (!lang) return; 
+        
+        if (!userRatings.has(r.userId)) {
+            userRatings.set(r.userId, { hebrewSum: 0, hebrewCount: 0, englishSum: 0, englishCount: 0 });
+        }
+        const entry = userRatings.get(r.userId)!;
+        const val = getRatingValue(r.value);
+        
+        if (lang === 'Hebrew') {
+            entry.hebrewSum += val;
+            entry.hebrewCount++;
+        } else {
+            entry.englishSum += val;
+            entry.englishCount++;
+        }
+    });
+
+    // 4. Combine
+    const results: UserLanguagePreference[] = [];
+    userChoices.forEach((choiceData, userId) => {
+        const total = choiceData.hebrew + choiceData.english;
+        // Include everyone who played at least one song
+        if (total === 0) return;
+        
+        const ratingData = userRatings.get(userId) || { hebrewSum: 0, hebrewCount: 0, englishSum: 0, englishCount: 0 };
+        
+        const avgHeb = ratingData.hebrewCount > 0 ? Math.round(ratingData.hebrewSum / ratingData.hebrewCount) : 0;
+        const avgEng = ratingData.englishCount > 0 ? Math.round(ratingData.englishSum / ratingData.englishCount) : 0;
+        
+        const hebrewRatio = choiceData.hebrew / total;
+        // Strict Majority for Hebrew Camp (>50%), otherwise English/Global Camp
+        const group = hebrewRatio > 0.5 ? 'Hebrew' : 'English';
+
+        results.push({
+            userId,
+            userName: choiceData.name,
+            totalSongsChosen: total,
+            hebrewSongsChosen: choiceData.hebrew,
+            englishSongsChosen: choiceData.english,
+            hebrewRatio,
+            avgRatingGivenToHebrew: avgHeb,
+            avgRatingGivenToEnglish: avgEng,
+            group
+        });
+    });
+
+    return {
+        hebrewLovers: results.filter(r => r.group === 'Hebrew').sort((a,b) => b.hebrewRatio - a.hebrewRatio),
+        englishLovers: results.filter(r => r.group === 'English').sort((a,b) => a.hebrewRatio - b.hebrewRatio) // Lowest Hebrew ratio first (Most English)
+    };
 };

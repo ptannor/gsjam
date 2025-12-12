@@ -23,14 +23,14 @@ import {
   Play, CheckCircle, ExternalLink, Image as ImageIcon,
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, CloudLightning, LogOut, Undo2, UserPlus, Star, Eye,
-  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive, Link as LinkIcon, Menu, Settings, Languages
+  Zap, Flame, TrendingUp, Sparkles, Mic2, AlertCircle, Database, Archive, Link as LinkIcon, Menu, Settings, Languages, Globe
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
 import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
-import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong, getBiggestThieves, getUserRatingHistory, getUserLanguageStats } from './components/StatsLogic';
+import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, ScoredSong, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences } from './components/StatsLogic';
 import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, push, remove, update } from './services/firebase';
 
 // --- Utility Functions ---
@@ -867,6 +867,11 @@ export default function App() {
   const tasteData = useMemo(() => {
     return calculateTasteSimilarity(ratings, participants);
   }, [ratings, participants]);
+
+  const languagePreferences = useMemo(() => {
+      // For language preferences, we use active stats (history aware)
+      return getLanguagePreferences(activeStatsSongs, activeStatsRatings);
+  }, [activeStatsSongs, activeStatsRatings]);
   
   const biggestThieves = useMemo(() => {
       // Use activeStatsSongs so it works for History too
@@ -1066,10 +1071,10 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 min-h-screen">
+      <main className="flex-1 md:ml-64 p-2 md:p-8 min-h-screen">
         
         {/* Mobile Header */}
-        <div className="md:hidden mb-6">
+        <div className="md:hidden mb-6 p-2">
             <div className="flex items-center justify-between mb-3">
                <div className="font-bold text-xl text-white">GS <span className="text-orange-500">Jam</span></div>
                <div className="flex items-center gap-2">
@@ -1118,7 +1123,7 @@ export default function App() {
         )}
 
         {view === 'jam' && (
-          <div className="max-w-3xl mx-auto space-y-6 pb-40">
+          <div className="w-full max-w-3xl mx-auto space-y-6 pb-40">
              <div className="flex items-center justify-between">
                <div>
                   <h2 className="text-3xl font-bold text-white">Queue</h2>
@@ -1195,7 +1200,7 @@ export default function App() {
         )}
 
         {view === 'stats' && (
-           <div className="max-w-4xl mx-auto pb-40">
+           <div className="w-full max-w-4xl mx-auto pb-40">
               <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
                  {[
                    { id: 'today', label: 'Session Dashboard', icon: Activity },
@@ -1373,223 +1378,69 @@ export default function App() {
                  </div>
               )}
 
-              {statsTab === 'history' && (
-                  <div className="space-y-6 animate-fade-in">
-                      <div className="flex flex-col md:flex-row items-center gap-4 bg-jam-800/50 p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
-                          <div className="flex-1 w-full">
-                              <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
-                              <div className="relative">
-                                  <select 
-                                    value={historyDate} 
-                                    onChange={(e) => setHistoryDate(e.target.value)}
-                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-sm"
-                                  >
-                                      <option value="">-- Choose a session --</option>
-                                      {Object.keys(archives).sort().reverse().map(date => (
-                                          <option key={date} value={date}>{date}</option>
-                                      ))}
-                                  </select>
-                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
-                              </div>
-                          </div>
-                          {historyDate && (
-                              <button onClick={() => deleteHistorySession(historyDate)} className="p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
-                                  <Trash2 size={20} />
-                              </button>
-                          )}
-                      </div>
-
-                      {historyDate && (
-                          <div className="bg-jam-800 border border-jam-700 rounded-2xl overflow-hidden shadow-2xl">
-                              <div className="bg-jam-900/80 p-4 border-b border-jam-700 flex justify-between items-center">
-                                  <h3 className="font-bold text-white flex items-center gap-2">
-                                      <Calendar size={18} className="text-orange-500" /> 
-                                      {historyDate}
-                                  </h3>
-                                  <span className="text-xs text-jam-400 bg-jam-800 px-2 py-1 rounded-lg border border-jam-700">{sessionDigest.length} Songs</span>
-                              </div>
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
-                                    <thead className="bg-jam-900/50 text-jam-400 uppercase text-xs font-bold tracking-wider">
-                                        <tr>
-                                            <th className="p-4 w-24">Time</th>
-                                            <th className="p-4">Song Details</th>
-                                            <th className="p-4 w-32 text-right">Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-jam-700">
-                                        {sessionDigest.map((row) => (
-                                            <tr key={row.id} className="hover:bg-jam-700/30 transition-colors group">
-                                                <td className="p-4 font-mono text-jam-500 text-xs">
-                                                    {row.playedAt ? new Date(row.playedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="font-bold text-white group-hover:text-orange-400 transition-colors">{row.title}</div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-jam-400 text-xs">{row.artist}</span>
-                                                        <span className="w-1 h-1 rounded-full bg-jam-600"></span>
-                                                        <span className="text-jam-500 text-xs flex items-center gap-1">
-                                                            <div className="w-4 h-4 rounded-full bg-jam-700 flex items-center justify-center text-[8px] font-bold text-jam-300">
-                                                                {row.ownerName.charAt(0)}
-                                                            </div>
-                                                            {row.ownerName}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-right">
-                                                    {row.score > 0 ? (
-                                                        <span className={`inline-block px-2 py-1 rounded font-mono font-bold text-xs ${row.score >= 90 ? 'text-green-400 bg-green-500/10' : 'text-jam-300 bg-jam-700'}`}>
-                                                            {row.score}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-jam-600 text-xs">-</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              )}
-
-              {/* Leaderboards Tab - REDESIGNED */}
-              {statsTab === 'leaderboards' && (
-                  <div className="space-y-8 animate-fade-in">
-                      
-                      {/* Top 3 Podium (Crowd Pleasers) */}
-                      <div className="relative pt-10 px-4">
-                         <h3 className="text-center font-bold text-white text-xl mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
-                             <Trophy size={24} className="text-yellow-500" />
-                             Crowd Pleasers
-                         </h3>
-                         <div className="flex items-end justify-center gap-2 md:gap-6 mb-8">
-                             {/* Silver */}
-                             {crowdPleasers[1] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[1].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-24 flex items-end justify-center pb-2 relative shadow-lg">
-                                         <div className="text-3xl font-bold text-gray-800 opacity-50">2</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-gray-500/50 text-xs font-mono text-gray-300">
-                                         {crowdPleasers[1].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                             {/* Gold */}
-                             {crowdPleasers[0] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[140px] z-10">
-                                      <div className="text-yellow-400 mb-2 animate-bounce"><Star size={20} fill="currentColor" /></div>
-                                     <div className="text-sm font-bold text-white mb-2">{crowdPleasers[0].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
-                                         <div className="text-4xl font-bold text-yellow-800 opacity-50">1</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-4 py-1.5 rounded-full border border-yellow-500/50 text-sm font-bold font-mono text-yellow-400">
-                                         {crowdPleasers[0].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                             {/* Bronze */}
-                             {crowdPleasers[2] && (
-                                 <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                     <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[2].userId}</div>
-                                     <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-16 flex items-end justify-center pb-2 relative shadow-lg">
-                                         <div className="text-3xl font-bold text-orange-900 opacity-50">3</div>
-                                     </div>
-                                     <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-orange-700/50 text-xs font-mono text-orange-400">
-                                         {crowdPleasers[2].avgScore} pts
-                                     </div>
-                                 </div>
-                             )}
-                         </div>
-                         <div className="border-t border-jam-800"></div>
-                      </div>
-
-                       {/* Top Songs All Time */}
-                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                           <div className="flex items-center justify-between mb-6">
-                               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                   <Star className="text-yellow-400" size={20} /> Hall of Fame
-                               </h3>
-                               <select 
-                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
-                                  value={leaderboardPerspective}
-                                  onChange={(e) => setLeaderboardPerspective(e.target.value)}
-                               >
-                                  <option value="all">Global Rank</option>
-                                  {ALL_USERS.map(u => (
-                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>Acc. to {u}</option>
-                                  ))}
-                               </select>
-                           </div>
-                           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
-                               {leaderboard.map((item, idx) => (
-                                   <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-4 transition-all">
-                                       <div className={`font-bold text-xl w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
-                                       <div className="flex-1 min-w-0">
-                                           <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
-                                           <div className="text-xs text-jam-400 truncate flex items-center gap-1">
-                                                {item.song.artist} <span className="text-jam-600">•</span> {item.song.ownerName}
-                                           </div>
-                                       </div>
-                                       <div className="flex flex-col items-end">
-                                            <div className="font-mono font-bold text-green-400 text-lg">{item.score}</div>
-                                            <div className="text-[9px] text-jam-500 uppercase">Points</div>
-                                       </div>
-                                   </div>
-                               ))}
-                           </div>
-                       </div>
-
-                       {/* Language Breakdown per User */}
-                       {userLanguageStats.length > 0 && (
-                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                 <Languages className="text-purple-400" size={20} /> Language Distribution
-                             </h3>
-                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                  <thead>
-                                     <tr className="text-jam-400 uppercase text-xs border-b border-jam-700">
-                                        <th className="pb-3 pl-2">User</th>
-                                        <th className="pb-3 text-center">Songs</th>
-                                        <th className="pb-3 text-center">Hebrew</th>
-                                        <th className="pb-3 text-center">English</th>
-                                        <th className="pb-3 w-32">Ratio</th>
-                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-jam-800">
-                                    {userLanguageStats.map(stat => (
-                                        <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
-                                           <td className="py-3 pl-2 font-medium text-white">{stat.name}</td>
-                                           <td className="py-3 text-center text-jam-300">{stat.total}</td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.hebrew} <span className="text-[10px] text-jam-500">({stat.hebrewPct}%)</span>
-                                           </td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.english} <span className="text-[10px] text-jam-500">({stat.englishPct}%)</span>
-                                           </td>
-                                           <td className="py-3">
-                                              <div className="flex h-2 rounded-full overflow-hidden w-full bg-jam-900">
-                                                 <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500"></div>
-                                                 <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500"></div>
-                                              </div>
-                                           </td>
-                                        </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                             </div>
-                          </div>
-                       )}
-                  </div>
-              )}
-
               {/* Taste Buds Tab */}
               {statsTab === 'taste' && (
                   <div className="space-y-8 animate-fade-in">
+                       
+                       {/* Language Groups: Hebrew Lovers vs English Lovers */}
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           {/* Hebrew Team */}
+                           <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
+                               <div className="absolute top-0 right-0 p-4 opacity-10"><Languages size={64} className="text-purple-500" /></div>
+                               <h3 className="text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">
+                                   🇮🇱 Hebrew Lovers
+                               </h3>
+                               <div className="space-y-3 relative z-10">
+                                   {languagePreferences.hebrewLovers.length > 0 ? languagePreferences.hebrewLovers.map(user => (
+                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-purple-500/20">
+                                           <div className="flex justify-between items-center mb-2">
+                                               <span className="font-bold text-white">{user.userName}</span>
+                                               <span className="text-xs font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">{(user.hebrewRatio * 100).toFixed(0)}% Hebrew</span>
+                                           </div>
+                                           <div className="flex gap-2 text-xs">
+                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-purple-900/50">
+                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🇮🇱</div>
+                                                   <div className="font-bold text-purple-400 text-sm">{user.avgRatingGivenToHebrew}</div>
+                                               </div>
+                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-jam-800">
+                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🌎</div>
+                                                   <div className="font-bold text-blue-400 text-sm">{user.avgRatingGivenToEnglish}</div>
+                                               </div>
+                                           </div>
+                                       </div>
+                                   )) : <div className="text-sm text-jam-500 italic">No one prefers Hebrew songs yet.</div>}
+                               </div>
+                           </div>
+
+                           {/* English Team */}
+                           <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-5 relative overflow-hidden">
+                               <div className="absolute top-0 right-0 p-4 opacity-10"><Globe size={64} className="text-blue-500" /></div>
+                               <h3 className="text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">
+                                   🌎 English Lovers
+                               </h3>
+                               <div className="space-y-3 relative z-10">
+                                   {languagePreferences.englishLovers.length > 0 ? languagePreferences.englishLovers.map(user => (
+                                       <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-blue-500/20">
+                                           <div className="flex justify-between items-center mb-2">
+                                               <span className="font-bold text-white">{user.userName}</span>
+                                               <span className="text-xs font-bold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full">{((1 - user.hebrewRatio) * 100).toFixed(0)}% English</span>
+                                           </div>
+                                           <div className="flex gap-2 text-xs">
+                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-jam-800">
+                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🇮🇱</div>
+                                                   <div className="font-bold text-purple-400 text-sm">{user.avgRatingGivenToHebrew}</div>
+                                               </div>
+                                               <div className="flex-1 bg-jam-950 rounded p-1.5 text-center border border-blue-900/50">
+                                                   <div className="text-jam-500 text-[10px] uppercase">Given to 🌎</div>
+                                                   <div className="font-bold text-blue-400 text-sm">{user.avgRatingGivenToEnglish}</div>
+                                               </div>
+                                           </div>
+                                       </div>
+                                   )) : <div className="text-sm text-jam-500 italic">No one prefers English songs yet.</div>}
+                               </div>
+                           </div>
+                       </div>
+
                        {/* User Ratings History Section - NEW */}
                        <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -1663,333 +1514,4 @@ export default function App() {
                                    );
                                })}
                                {tasteData.soulmates.length === 0 && (
-                                   <div className="col-span-full text-center py-12 text-jam-500 italic">
-                                       Not enough shared ratings yet to verify soulmates. Start jamming!
-                                   </div>
-                               )}
-                           </div>
-                       </div>
-
-                       {/* Musical Opposites (Lowest Match) */}
-                       {tasteData.opposites.length > 0 && (
-                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <Zap className="text-purple-400" size={20} /> Musical Opposites
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {tasteData.opposites.slice(0, 4).map((pair, idx) => {
-                                        const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
-                                        const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
-                                        return (
-                                            <div key={idx} className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
-                                                <div className="text-sm font-medium text-jam-300">
-                                                    {userA} <span className="text-jam-600 px-1">&</span> {userB}
-                                                </div>
-                                                <div className="text-sm font-bold text-purple-400">{pair.score}% match</div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                       )}
-                  </div>
-              )}
-
-           </div>
-        )}
-      </main>
-
-      {/* --- Modals --- */}
-      
-      {/* Add Song Modal */}
-      <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? "Edit Song" : "Add Song"}>
-          <div className="space-y-4">
-             <div>
-               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Title</label>
-               <input 
-                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                 placeholder="e.g. Wonderwall"
-                 value={newSong.title}
-                 onChange={e => {
-                     setNewSong({...newSong, title: e.target.value});
-                     setHasSearched(false);
-                 }}
-               />
-             </div>
-             
-             <div>
-               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Artist (Optional)</label>
-               <input 
-                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                 placeholder="e.g. Oasis"
-                 value={newSong.artist}
-                 onChange={e => {
-                     setNewSong({...newSong, artist: e.target.value});
-                     setHasSearched(false);
-                 }}
-               />
-             </div>
-             
-             <div>
-               <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Who is this for?</label>
-               <select 
-                 className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
-                 value={newSong.ownerId}
-                 onChange={e => setNewSong({...newSong, ownerId: e.target.value})}
-               >
-                 <option value="" disabled>Select Participant</option>
-                 {participants.map(p => (
-                   <option key={p.userId} value={p.userId}>{p.name}</option>
-                 ))}
-               </select>
-             </div>
-
-             <div className="border-t border-jam-700 pt-4">
-                <label className="block text-xs font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
-                <div className="flex gap-2 mb-4 p-1 bg-jam-900 rounded-xl border border-jam-700">
-                  <button onClick={() => { setNewSong({...newSong, chordType: 'auto_search'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'auto_search' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                    <Sparkles size={14} /> AI Search
-                  </button>
-                  <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'link' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                    <LinkIcon size={14} /> Paste Link
-                  </button>
-                  <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                    <ImageIcon size={14} /> Image
-                  </button>
-                </div>
-
-                {newSong.chordType === 'auto_search' && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 text-center">
-                        <p className="text-sm text-jam-300 mb-3">We'll find the best chord versions from Ultimate Guitar, Tab4u, and more.</p>
-                        <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title} className="w-full">
-                            {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <><Search size={16} /> Find Chords</>}
-                        </Button>
-                    </div>
-
-                    {/* Selected Link Preview */}
-                    {newSong.link && (
-                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-3">
-                             <div className="p-2 bg-green-500/20 rounded-full text-green-400"><CheckCircle size={16} /></div>
-                             <div className="flex-1 min-w-0">
-                                 <div className="text-xs font-bold text-green-400 uppercase tracking-wider">Selected</div>
-                                 <div className="text-sm text-white truncate underline decoration-green-500/50">{newSong.link}</div>
-                             </div>
-                             <button onClick={() => window.open(newSong.link, '_blank')} className="text-jam-400 hover:text-white"><ExternalLink size={14} /></button>
-                         </div>
-                    )}
-
-                    {/* Error Message Display */}
-                    {searchError && (
-                      <div className="mt-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-center animate-fade-in">
-                         <div className="text-red-400 text-sm font-bold flex items-center justify-center gap-2">
-                             <ShieldAlert size={16} /> Search Failed
-                         </div>
-                         <div className="text-xs text-jam-400 mt-1 mb-2">{searchError}</div>
-                         
-                         {/* Fallback Manual Search Button - ALWAYS shown on error */}
-                         {manualSearchUrl && (
-                             <button 
-                                onClick={() => window.open(manualSearchUrl, '_blank')}
-                                className="text-xs bg-jam-800 hover:bg-jam-700 text-white border border-jam-600 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
-                             >
-                                <Search size={12} /> Google Search Manually
-                             </button>
-                         )}
-                      </div>
-                    )}
-                    
-                    {/* No Results Message */}
-                    {hasSearched && !searchError && searchResults.length === 0 && !isSearching && (
-                      <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 text-center">
-                         <div className="text-orange-400 text-sm font-bold mb-1">No direct chords found automatically.</div>
-                         <div className="text-xs text-jam-400 mb-2">We couldn't verify a deep link for this song.</div>
-                         <button 
-                            onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(newSong.title + " " + newSong.artist + " chords ultimate-guitar tab4u negina nagenu")}`, '_blank')}
-                            className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
-                         >
-                            <Search size={12} /> Search Manually on Google
-                         </button>
-                      </div>
-                    )}
-
-                    {searchResults.length > 0 && (
-                      <div className="space-y-2 mt-2">
-                        {searchResults.map((result, idx) => (
-                           <div key={idx} onClick={() => selectSearchResult(result)} className={`p-3 rounded-lg border cursor-pointer transition-colors group flex items-center gap-3 ${newSong.link === result.url ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-900 border-jam-700 hover:border-jam-500'}`}>
-                              <div className="flex-1">
-                                  <div className={`font-bold text-sm ${newSong.link === result.url ? 'text-orange-400' : 'text-white'}`}>{result.title}</div>
-                                  <div className="text-[10px] text-jam-500 uppercase font-bold tracking-wider">{result.snippet}</div>
-                              </div>
-                              <button 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    window.open(result.url, '_blank');
-                                }}
-                                className="p-2 text-jam-400 hover:text-white hover:bg-jam-700 rounded-full transition-colors"
-                                title="Open in New Tab"
-                              >
-                                  <Eye size={18} />
-                              </button>
-                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {newSong.chordType === 'link' && (
-                  <div className="animate-fade-in">
-                      <div className="bg-jam-900 p-1 rounded-xl border border-jam-700 focus-within:border-orange-500 transition-colors flex items-center">
-                          <div className="p-3 text-jam-500"><LinkIcon size={18} /></div>
-                          <input 
-                              className="flex-1 bg-transparent p-3 pl-0 text-white outline-none text-sm font-mono placeholder-jam-600"
-                              placeholder="https://tabs.ultimate-guitar.com/tab/..."
-                              value={newSong.link}
-                              onChange={e => setNewSong({...newSong, link: e.target.value})}
-                          />
-                      </div>
-                      <p className="text-xs text-jam-500 mt-2 pl-1">Paste a direct link to the chords page.</p>
-                  </div>
-                )}
-
-                {newSong.chordType === 'screenshot' && (
-                  <div className="h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50 animate-fade-in">
-                    {newSong.screenshot ? (
-                      <div className="relative w-full h-full p-2 flex items-center justify-center">
-                         <img src={newSong.screenshot} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />
-                         <button onClick={() => setNewSong({...newSong, screenshot: ''})} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full shadow-lg transition-colors">
-                           <Trash2 size={16} />
-                         </button>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload size={32} className="text-jam-500 mb-2" />
-                        <span className="text-sm text-jam-400">Tap to upload image</span>
-                        <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                      </>
-                    )}
-                  </div>
-                )}
-             </div>
-
-             <Button className="w-full py-3 mt-4" onClick={handleSaveSong} disabled={!isFormValid}>
-                {editingSongId ? 'Save Changes' : 'Add to Queue'}
-             </Button>
-          </div>
-      </Modal>
-
-      {/* Rating Modal */}
-      <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Rate this Performance">
-        <div className="text-center">
-           <h3 className="text-xl font-bold text-white mb-1">{showRatingModal?.title}</h3>
-           <p className="text-jam-400 mb-6">by {showRatingModal?.ownerName}</p>
-           
-           <div className="grid grid-cols-1 gap-3">
-             {RATING_OPTIONS.map(option => (
-               <button 
-                 key={option.value}
-                 onClick={() => submitRating(option.value)}
-                 className={`p-4 rounded-xl border border-jam-700 bg-jam-800 hover:bg-jam-700 transition-all flex items-center justify-center gap-3 group`}
-               >
-                 <span className={`text-lg font-bold ${option.color}`}>{option.label}</span>
-               </button>
-             ))}
-           </div>
-        </div>
-      </Modal>
-
-      {/* Add Participant Modal */}
-      <Modal isOpen={showAddParticipantModal} onClose={() => setShowAddParticipantModal(false)} title="Add Participant">
-          <div className="space-y-4">
-             <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Name</label>
-                <select 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
-                    value={proxyUserToAdd}
-                    onChange={(e) => setProxyUserToAdd(e.target.value)}
-                >
-                    <option value="" disabled>Select Name</option>
-                    {ALL_USERS.map(u => (
-                        <option key={u} value={u}>{u}</option>
-                    ))}
-                </select>
-             </div>
-             <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
-                <input 
-                    type="time" 
-                    step="1" 
-                    value={proxyArrivalTime} 
-                    onChange={(e) => setProxyArrivalTime(e.target.value)} 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                />
-             </div>
-             <Button className="w-full" onClick={confirmProxyParticipant} disabled={!proxyUserToAdd}>Add User</Button>
-          </div>
-      </Modal>
-
-       {/* Mobile Manage Participants Modal */}
-       <Modal isOpen={showManageParticipantsModal} onClose={() => setShowManageParticipantsModal(false)} title="Manage Participants">
-            <div className="space-y-4">
-                <div className="flex justify-between items-center mb-4">
-                     <p className="text-sm text-jam-400">Edit times or remove users.</p>
-                     <button onClick={() => { setShowManageParticipantsModal(false); handleAddProxyParticipant(); }} className="text-orange-500 font-bold text-sm flex items-center gap-1">
-                        <Plus size={16} /> Add New
-                     </button>
-                </div>
-                <div className="space-y-2">
-                    {[...participants].sort((a,b) => a.arrivalTime - b.arrivalTime).map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-jam-900 border border-jam-800">
-                            <div>
-                                <div className="text-sm font-medium text-white">{p.name}</div>
-                                <div className="text-xs text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => { setShowManageParticipantsModal(false); openEditParticipantModal(p); }} className="p-2 bg-jam-800 rounded-full text-jam-400 hover:text-white">
-                                    <Pencil size={16} />
-                                </button>
-                                <button onClick={() => deleteParticipant(p)} className="p-2 bg-jam-800 rounded-full text-jam-400 hover:text-red-400">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-       </Modal>
-
-      {/* Edit Participant Arrival Time Modal */}
-      <Modal isOpen={!!editingParticipant} onClose={() => setEditingParticipant(null)} title="Edit Arrival Time">
-          <div className="space-y-4">
-             <div className="text-center text-white font-bold text-lg mb-2">{editingParticipant?.name}</div>
-             <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
-                <input 
-                    type="time" 
-                    step="1" 
-                    value={editArrivalTimeValue} 
-                    onChange={(e) => setEditArrivalTimeValue(e.target.value)} 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-center text-xl" 
-                />
-             </div>
-             <div className="text-xs text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
-                Warning: Changing arrival time will immediately reshuffle the fair queue order.
-             </div>
-             <Button className="w-full" onClick={saveParticipantEdit}>Update Time</Button>
-          </div>
-      </Modal>
-
-      {/* Image Viewer Overlay */}
-      {viewingImage && (
-        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4" onClick={() => setViewingImage(null)}>
-           <button onClick={() => setViewingImage(null)} className="absolute top-4 right-4 text-white hover:text-orange-500 transition-colors">
-              <X size={32} />
-           </button>
-           <img src={viewingImage} alt="Chords" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
-        </div>
-      )}
-
-    </div>
-  );
-}
+                                   <div className="col-span-full text-center py-
