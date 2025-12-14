@@ -24,7 +24,7 @@ import {
   RotateCcw, Search, Trash2, ShieldAlert, Upload, ArrowLeft, Calendar, Guitar, Pencil, X,
   Trophy, Heart, Activity, History, ChevronDown, LogOut, Undo2, UserPlus, Star, Eye,
   Zap, Flame, TrendingUp, Sparkles, Mic2, Database, Archive, Link as LinkIcon, Languages, Globe,
-  ThumbsUp, StopCircle, RefreshCw
+  ThumbsUp, StopCircle, RefreshCw, Menu as MenuIcon, Power
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
@@ -395,6 +395,7 @@ export default function App() {
   // Add Participant State
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
   const [showManageParticipantsModal, setShowManageParticipantsModal] = useState(false); // Mobile Management
+  const [showMobileMenu, setShowMobileMenu] = useState(false); // Mobile Menu State
   const [proxyUserToAdd, setProxyUserToAdd] = useState<string>('');
   const [proxyArrivalTime, setProxyArrivalTime] = useState<string>('');
 
@@ -581,6 +582,7 @@ export default function App() {
       const updatedSession = { ...session, status: 'ended' };
       setSession(updatedSession as JamSession);
       updateData('session', updatedSession);
+      setShowMobileMenu(false);
   };
 
   const reopenSession = () => {
@@ -615,6 +617,7 @@ export default function App() {
 
       // 4. Logout
       setCurrentUser(null);
+      setShowMobileMenu(false);
   };
 
   const handleJoinSelection = (userName: UserName) => {
@@ -1239,16 +1242,22 @@ export default function App() {
               <div className="animate-pulse-glow p-8 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-lg">
                   <Music size={80} className="text-white" />
               </div>
-              <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-purple-400 mb-6 tracking-tight">
-                  JAM SESSION IS OVER!
-              </h1>
-              <p className="text-2xl text-white font-bold mb-12 animate-bounce">
-                  Now get up and dance! 💃🕺
+              <p className="text-xl text-jam-300 font-medium mb-4 uppercase tracking-widest opacity-80">
+                  JAM SESSION IS OVER
               </p>
+              <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-purple-400 mb-12 tracking-tight animate-bounce">
+                  Now get up and dance! 💃🕺
+              </h1>
               
-              <div className="flex gap-4">
-                  <Button variant="secondary" onClick={reopenSession} className="bg-white/10 hover:bg-white/20 border-white/20 text-white">
+              <div className="flex flex-col gap-4 w-full max-w-sm">
+                  <Button variant="secondary" onClick={reopenSession} className="bg-white/10 hover:bg-white/20 border-white/20 text-white w-full">
                       <Undo2 size={18} /> Reopen Session
+                  </Button>
+                  <Button variant="primary" onClick={startNewSession} className="w-full">
+                      <Plus size={18} /> Start New Session
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setView('stats'); setStatsTab('history'); reopenSession(); }} className="w-full text-jam-400 hover:text-white">
+                      <History size={18} /> View History
                   </Button>
               </div>
           </div>
@@ -1409,21 +1418,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sidebar Footer Actions */}
-        <div className="px-4 pb-2 space-y-2">
-             <button onClick={leaveSession} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-jam-400 hover:text-white hover:bg-jam-800 border border-jam-800 hover:border-jam-700 transition-all">
-                <LogOut size={14} /> Leave Session
-             </button>
-             <button onClick={endSession} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 transition-all">
-                <StopCircle size={14} /> End Session
-             </button>
-        </div>
-
         <div className="p-4 border-t border-jam-800 bg-jam-900/50">
            <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-jam-500">Logged in as</span>
-              <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-white transition-colors" title="Logout (Keep Songs)">
-                  <RefreshCw size={14} />
+              {/* Desktop Logout Button */}
+              <button onClick={() => setCurrentUser(null)} className="text-xs font-bold uppercase tracking-wider text-jam-400 hover:text-white flex items-center gap-1 bg-jam-800 px-2 py-1 rounded border border-jam-700 hover:bg-jam-700 transition-all">
+                  <LogOut size={12} /> Logout
               </button>
            </div>
            <div className="font-bold text-white truncate">{currentUser.name}</div>
@@ -1445,7 +1445,13 @@ export default function App() {
                     >
                         <Users size={18} />
                     </button>
-                    <button onClick={endSession} className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20" title="End Session"><StopCircle size={18}/></button>
+                    <button 
+                        onClick={() => setShowMobileMenu(true)} 
+                        className="p-2 rounded-lg bg-jam-800 text-jam-400 hover:text-white border border-jam-700" 
+                        title="Menu"
+                    >
+                        <MenuIcon size={18}/>
+                    </button>
                </div>
             </div>
             
@@ -1456,7 +1462,6 @@ export default function App() {
                   <button onClick={() => setView('stats')} className={`p-1.5 px-3 rounded-lg text-xs font-bold uppercase tracking-wider ${view === 'stats' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}>Stats</button>
                </div>
             </div>
-            <button onClick={leaveSession} className="w-full py-2 bg-jam-800/50 text-jam-400 text-xs font-bold uppercase rounded-lg border border-jam-800 hover:text-white hover:bg-jam-800 mb-2">Leave Session & Clear Songs</button>
         </div>
         
         {/* Old Session Warning & Action */}
@@ -2139,6 +2144,48 @@ export default function App() {
                             </div>
                         </div>
                     ))}
+                </div>
+            </div>
+       </Modal>
+
+        {/* Mobile Main Menu Modal */}
+       <Modal isOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} title="Menu">
+            <div className="space-y-4">
+                {/* Primary Action: Logout */}
+                <button 
+                    onClick={() => { setCurrentUser(null); setShowMobileMenu(false); }}
+                    className="w-full flex items-center gap-3 p-4 bg-jam-700/50 hover:bg-jam-700 rounded-xl text-white font-bold transition-all border border-jam-600"
+                >
+                    <LogOut size={20} /> Log Out <span className="text-jam-400 font-normal text-sm ml-auto">Switch user</span>
+                </button>
+
+                <div className="h-px bg-jam-700 my-4"></div>
+
+                {/* Danger Zone */}
+                <div className="space-y-3">
+                    <p className="text-xs font-bold text-jam-500 uppercase tracking-wider pl-1">Session Management</p>
+                    
+                    <button 
+                        onClick={leaveSession}
+                        className="w-full flex items-center gap-3 p-4 bg-jam-900 hover:bg-jam-800 rounded-xl text-jam-300 font-medium transition-all border border-jam-800"
+                    >
+                        <LogOut size={20} className="text-orange-500" /> 
+                        <div className="text-left">
+                            <div className="text-white font-bold">Leave Session</div>
+                            <div className="text-[10px] text-jam-500">Remove me & my unplayed songs</div>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={endSession}
+                        className="w-full flex items-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-300 font-medium transition-all border border-red-500/20"
+                    >
+                        <Power size={20} /> 
+                        <div className="text-left">
+                            <div className="text-red-400 font-bold">End Session</div>
+                            <div className="text-[10px] text-red-300/50">Close jam for everyone</div>
+                        </div>
+                    </button>
                 </div>
             </div>
        </Modal>
