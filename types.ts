@@ -39,6 +39,17 @@ export interface SongChoice {
   playedAt?: number;
 }
 
+export interface SongCacheItem {
+  id: string;
+  userId: string;
+  title: string;
+  artist: string;
+  chordSourceType: ChordSourceType;
+  chordLink?: string;
+  chordScreenshotUrl?: string;
+  createdAt: number;
+}
+
 export type RatingValue = 'Highlight' | 'Sababa' | 'No comment' | 'Needs work';
 
 export interface Rating {
