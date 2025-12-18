@@ -111,22 +111,21 @@ const Button = ({ onClick, children, variant = 'primary', className = '', disabl
   );
 };
 
-// ... (LanguageBalanceCard, LanguageLoversSection, SortableSongItem components remain unchanged) ...
 // --- Reusable Stats Components ---
 
 const LanguageBalanceCard = ({ languages }: { languages: SessionSummary['languages'] }) => (
-    <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-5 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
-        <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
-        <div className="flex items-center gap-4 mt-1">
+    <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-4 md:p-5 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
+        <div className="text-jam-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
+        <div className="flex items-center gap-3 md:gap-4 mt-1">
             <div>
-                <div className="text-lg font-bold text-white">{languages.hebrew}</div>
-                <div className="text-[10px] text-jam-500 uppercase">Hebrew</div>
+                <div className="text-base md:text-lg font-bold text-white">{languages.hebrew}</div>
+                <div className="text-[9px] md:text-[10px] text-jam-500 uppercase">Hebrew</div>
             </div>
-            <div className="h-8 w-px bg-jam-700"></div>
+            <div className="h-6 md:h-8 w-px bg-jam-700"></div>
             <div>
-                <div className="text-lg font-bold text-white">{languages.english}</div>
-                <div className="text-[10px] text-jam-500 uppercase">English</div>
+                <div className="text-base md:text-lg font-bold text-white">{languages.english}</div>
+                <div className="text-[9px] md:text-[10px] text-jam-500 uppercase">English</div>
             </div>
         </div>
         <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden flex">
@@ -137,66 +136,66 @@ const LanguageBalanceCard = ({ languages }: { languages: SessionSummary['languag
 );
 
 const LanguageLoversSection = ({ preferences, titleSuffix = "" }: { preferences: { hebrewLovers: UserLanguagePreference[], englishLovers: UserLanguagePreference[] }, titleSuffix?: string }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Hebrew Team */}
-        <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10"><Languages size={64} className="text-purple-500" /></div>
-            <h3 className="text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">
-                🇮🇱 Hebrew Lovers <span className="text-xs opacity-50 font-normal">{titleSuffix}</span>
+        <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10"><Languages size={48} className="text-purple-500 md:w-16 md:h-16" /></div>
+            <h3 className="text-base md:text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">
+                🇮🇱 Hebrew Lovers <span className="text-[10px] md:text-xs opacity-50 font-normal">{titleSuffix}</span>
             </h3>
             <div className="space-y-3 relative z-10">
                 {preferences.hebrewLovers.length > 0 ? preferences.hebrewLovers.map(user => (
                     <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-purple-500/20">
-                        <div className="font-bold text-white mb-2">{user.userName}</div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="font-bold text-sm md:text-base text-white mb-2 truncate">{user.userName}</div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs">
                             <div className="bg-jam-950 rounded p-2 border border-purple-900/50 flex flex-col items-center justify-center">
-                                <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Selection</div>
-                                <div className="text-purple-300 font-bold text-sm">{(user.hebrewRatio * 100).toFixed(0)}% Heb</div>
-                                <div className="text-jam-600 text-[9px] mt-0.5">{user.hebrewSongsChosen}h / {user.englishSongsChosen}e</div>
+                                <div className="text-jam-500 text-[8px] md:text-[10px] uppercase mb-0.5 font-bold">Selection</div>
+                                <div className="text-purple-300 font-bold">{(user.hebrewRatio * 100).toFixed(0)}% Heb</div>
+                                <div className="text-jam-600 text-[8px] md:text-[9px] mt-0.5">{user.hebrewSongsChosen}h / {user.englishSongsChosen}e</div>
                             </div>
                             <div className="bg-jam-950 rounded p-2 border border-jam-800 flex flex-col items-center justify-center">
-                                <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Rating Pref</div>
-                                <div className="flex gap-2 text-xs font-bold">
+                                <div className="text-jam-500 text-[8px] md:text-[10px] uppercase mb-0.5 font-bold">Rating Pref</div>
+                                <div className="flex gap-1 md:gap-2 font-bold">
                                     <span className="text-purple-400">{user.avgRatingGivenToHebrew}</span>
-                                    <span className="text-jam-600">vs</span>
+                                    <span className="text-jam-600">v</span>
                                     <span className="text-blue-400">{user.avgRatingGivenToEnglish}</span>
                                 </div>
-                                <div className="text-jam-600 text-[9px] mt-0.5">Heb vs Eng</div>
+                                <div className="text-jam-600 text-[8px] md:text-[9px] mt-0.5">Heb v Eng</div>
                             </div>
                         </div>
                     </div>
-                )) : <div className="text-sm text-jam-500 italic">No one in this group prefers Hebrew songs.</div>}
+                )) : <div className="text-xs md:text-sm text-jam-500 italic">No one in this group prefers Hebrew songs.</div>}
             </div>
         </div>
 
         {/* English Team */}
-        <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10"><Globe size={64} className="text-blue-500" /></div>
-            <h3 className="text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">
-                🌎 English Lovers <span className="text-xs opacity-50 font-normal">{titleSuffix}</span>
+        <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-4 md:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10"><Globe size={48} className="text-blue-500 md:w-16 md:h-16" /></div>
+            <h3 className="text-base md:text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">
+                🌎 English Lovers <span className="text-[10px] md:text-xs opacity-50 font-normal">{titleSuffix}</span>
             </h3>
             <div className="space-y-3 relative z-10">
                 {preferences.englishLovers.length > 0 ? preferences.englishLovers.map(user => (
                     <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-blue-500/20">
-                        <div className="font-bold text-white mb-2">{user.userName}</div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="font-bold text-sm md:text-base text-white mb-2 truncate">{user.userName}</div>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs">
                             <div className="bg-jam-950 rounded p-2 border border-blue-900/50 flex flex-col items-center justify-center">
-                                <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Selection</div>
-                                <div className="text-blue-300 font-bold text-sm">{((1 - user.hebrewRatio) * 100).toFixed(0)}% Eng</div>
-                                <div className="text-jam-600 text-[9px] mt-0.5">{user.englishSongsChosen}e / {user.hebrewSongsChosen}h</div>
+                                <div className="text-jam-500 text-[8px] md:text-[10px] uppercase mb-0.5 font-bold">Selection</div>
+                                <div className="text-blue-300 font-bold">{((1 - user.hebrewRatio) * 100).toFixed(0)}% Eng</div>
+                                <div className="text-jam-600 text-[8px] md:text-[9px] mt-0.5">{user.englishSongsChosen}e / {user.hebrewSongsChosen}h</div>
                             </div>
                             <div className="bg-jam-950 rounded p-2 border border-jam-800 flex flex-col items-center justify-center">
-                                <div className="text-jam-500 text-[10px] uppercase mb-1 font-bold">Rating Pref</div>
-                                <div className="flex gap-2 text-xs font-bold">
+                                <div className="text-jam-500 text-[8px] md:text-[10px] uppercase mb-0.5 font-bold">Rating Pref</div>
+                                <div className="flex gap-1 md:gap-2 font-bold">
                                     <span className="text-blue-400">{user.avgRatingGivenToEnglish}</span>
-                                    <span className="text-jam-600">vs</span>
+                                    <span className="text-jam-600">v</span>
                                     <span className="text-purple-400">{user.avgRatingGivenToHebrew}</span>
                                 </div>
-                                <div className="text-jam-600 text-[9px] mt-0.5">Eng vs Heb</div>
+                                <div className="text-jam-600 text-[8px] md:text-[9px] mt-0.5">Eng v Heb</div>
                             </div>
                         </div>
                     </div>
-                )) : <div className="text-sm text-jam-500 italic">No one in this group prefers English songs.</div>}
+                )) : <div className="text-xs md:text-sm text-jam-500 italic">No one in this group prefers English songs.</div>}
             </div>
         </div>
     </div>
@@ -238,33 +237,33 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
   return (
     <div ref={setNodeRef} style={style} className={`relative mb-3 group ${isPlayed ? 'opacity-80' : ''}`}>
       <div className={`
-        flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 select-none
+        flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl border transition-all duration-300 select-none
         ${isCurrent ? 'bg-jam-800 border-orange-500/50 shadow-[0_0_25px_rgba(249,115,22,0.1)]' : 'bg-jam-800 border-jam-700 hover:border-jam-600 hover:bg-jam-700/50'}
         ${isPlayed ? 'bg-jam-900 border-jam-800 hover:bg-jam-800' : ''}
         ${song.isStolen ? 'border-l-4 border-l-red-500/80 bg-red-900/5' : ''}
       `}>
         {!isPlayed && (
           // Added touch-none to prevent scrolling while dragging on mobile
-          <div {...attributes} {...listeners} className="cursor-grab text-jam-600 hover:text-jam-400 p-2 -ml-2 touch-none">
-            <GripVertical size={24} />
+          <div {...attributes} {...listeners} className="cursor-grab text-jam-600 hover:text-jam-400 p-1.5 -ml-1 touch-none">
+            <GripVertical size={20} className="md:w-6 md:h-6" />
           </div>
         )}
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-             <h4 className={`font-bold truncate text-base ${isCurrent ? 'text-orange-400' : 'text-white'}`}>{song.title}</h4>
-             {song.isStolen && <span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider border border-red-500/20">Stolen</span>}
+          <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+             <h4 className={`font-bold truncate text-sm md:text-base ${isCurrent ? 'text-orange-400' : 'text-white'}`}>{song.title}</h4>
+             {song.isStolen && <span className="text-[8px] md:text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider border border-red-500/20">Stolen</span>}
           </div>
-          <p className="text-sm text-jam-400 truncate flex items-center gap-2">
+          <p className="text-[11px] md:text-sm text-jam-400 truncate flex items-center gap-1.5">
             <span className="font-medium text-jam-300">{song.artist}</span> 
             <span className="w-1 h-1 rounded-full bg-jam-600"></span>
             <span className="text-jam-400">{song.ownerName}</span>
           </p>
           
-          <div className="flex gap-3 mt-2">
+          <div className="flex gap-2 md:gap-3 mt-1.5 md:mt-2">
              {song.chordLink && (
-               <a href={song.chordLink} target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-xs flex items-center gap-1.5 text-orange-400 hover:text-orange-300 hover:bg-jam-700 transition-colors" onPointerDown={(e) => e.stopPropagation()}>
-                 <ExternalLink size={10} /> Link to Chords
+               <a href={song.chordLink} target="_blank" rel="noreferrer" className="px-1.5 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-[9px] md:text-xs flex items-center gap-1 text-orange-400 hover:text-orange-300 hover:bg-jam-700 transition-colors" onPointerDown={(e) => e.stopPropagation()}>
+                 <ExternalLink size={8} className="md:w-2.5 md:h-2.5" /> Chords
                </a>
              )}
              {song.chordScreenshotUrl && (
@@ -273,25 +272,25 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
                    e.stopPropagation();
                    if (onViewImage) onViewImage(song.chordScreenshotUrl!);
                  }}
-                 className="px-2 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-xs flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-jam-700 transition-colors"
+                 className="px-1.5 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-[9px] md:text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 hover:bg-jam-700 transition-colors"
                  onPointerDown={(e) => e.stopPropagation()}
                >
-                 <ImageIcon size={10} /> Image
+                 <ImageIcon size={8} className="md:w-2.5 md:h-2.5" /> Image
                </button>
              )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {song.playStatus === 'not_played' && (
-            <button onClick={onMarkPlaying} className="p-3 text-jam-400 hover:text-orange-400 hover:bg-jam-700/80 rounded-full transition-all" title="Start Playing">
-              <Play size={20} fill="currentColor" className="opacity-80" />
+            <button onClick={onMarkPlaying} className="p-2 md:p-3 text-jam-400 hover:text-orange-400 hover:bg-jam-700/80 rounded-full transition-all" title="Start Playing">
+              <Play size={18} fill="currentColor" className="opacity-80 md:w-5 md:h-5" />
             </button>
           )}
           
           {song.playStatus === 'playing' && (
-            <button onClick={onMarkPlayed} className="p-3 text-green-400 hover:text-green-300 bg-green-500/10 border border-green-500/30 rounded-full animate-pulse transition-all" title="Mark as Played">
-              <CheckCircle size={20} />
+            <button onClick={onMarkPlayed} className="p-2 md:p-3 text-green-400 hover:text-green-300 bg-green-500/10 border border-green-500/30 rounded-full animate-pulse transition-all" title="Mark as Played">
+              <CheckCircle size={18} className="md:w-5 md:h-5" />
             </button>
           )}
 
@@ -302,20 +301,20 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
                    // Existing Rating - Click to Edit
                    <button 
                       onClick={onRate} 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border bg-jam-900/50 hover:bg-jam-800 transition-all flex items-center gap-1 ${getRatingDetails(existingRatingValue)?.color} border-current`} 
+                      className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold border bg-jam-900/50 hover:bg-jam-800 transition-all flex items-center gap-1 ${getRatingDetails(existingRatingValue)?.color} border-current`} 
                       title="Change Rating"
                    >
-                      {getRatingDetails(existingRatingValue)?.label}
+                      {getRatingDetails(existingRatingValue)?.label.split(' ')[1]}
                    </button>
                 ) : onRate ? (
                    // Can Rate
                    <button onClick={onRate} className="p-2 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-full transition-all" title="Rate this song">
-                     <Star size={18} />
+                     <Star size={16} className="md:w-[18px] md:h-[18px]" />
                    </button>
                 ) : (
                    // Cannot Rate (Played before arrival)
                    <div className="p-2 text-jam-700 cursor-not-allowed opacity-50" title="Played before you arrived">
-                      <Clock size={18} />
+                      <Clock size={16} className="md:w-[18px] md:h-[18px]" />
                    </div>
                 )}
              </>
@@ -323,27 +322,27 @@ const SortableSongItem: React.FC<SortableSongItemProps> = ({
 
           {/* Edit Button */}
           {onEdit && (
-            <button onClick={onEdit} className="p-2 text-jam-500 hover:text-jam-200 hover:bg-jam-700 rounded-full transition-colors" title="Edit Song">
-              <Pencil size={16} />
+            <button onClick={onEdit} className="p-1.5 md:p-2 text-jam-500 hover:text-jam-200 hover:bg-jam-700 rounded-full transition-colors" title="Edit Song">
+              <Pencil size={14} className="md:w-4 md:h-4" />
             </button>
           )}
 
           {/* Unsteal Button */}
           {song.isStolen && onUnsteal && (
-            <button onClick={onUnsteal} className="p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-full transition-colors" title="Return to Natural Order">
-              <Undo2 size={16} />
+            <button onClick={onUnsteal} className="p-1.5 md:p-2 text-red-400 hover:text-white hover:bg-red-500/20 rounded-full transition-colors" title="Return to Natural Order">
+              <Undo2 size={14} className="md:w-4 md:h-4" />
             </button>
           )}
 
           {isPlayed && onRevive && (
-             <button onClick={onRevive} className="p-2 text-jam-500 hover:text-white rounded-full transition-colors" title="Revive">
-               <RotateCcw size={18} />
+             <button onClick={onRevive} className="p-1.5 md:p-2 text-jam-500 hover:text-white rounded-full transition-colors" title="Revive">
+               <RotateCcw size={16} className="md:w-[18px] md:h-[18px]" />
              </button>
           )}
 
           {!isPlayed && onDelete && (
-            <button onClick={onDelete} className="p-3 text-jam-600 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all" title="Remove">
-              <Trash2 size={18} />
+            <button onClick={onDelete} className="p-2 md:p-3 text-jam-600 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all" title="Remove">
+              <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
             </button>
           )}
         </div>
@@ -836,7 +835,6 @@ export default function App() {
     setShowAddParticipantModal(true);
   };
 
-  // ... (Other handlers like confirmProxyParticipant, etc. kept same) ...
   const confirmProxyParticipant = () => {
     if (!session || !proxyUserToAdd) return;
     
@@ -1156,8 +1154,6 @@ export default function App() {
       setSelectedRecoveryIds(newSet);
   };
 
-  // ... (keeping other handlers like performSearch, sensors, handleDragEnd, etc. same as before) ...
-
   const performSearch = async () => {
     setHasSearched(true);
     setIsSearching(true);
@@ -1291,7 +1287,7 @@ export default function App() {
     setShowRatingModal(null);
   };
 
-  // --- Stats Aggregation (Logic Unchanged) ---
+  // --- Stats Aggregation ---
   const globalDataset = useMemo(() => {
       let allSongs = [...songs];
       let allRatings = [...ratings];
@@ -1358,20 +1354,20 @@ export default function App() {
 
   // --- Render Dashboard Helper ---
   const renderDashboardContent = () => (
-      <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl flex flex-col items-center justify-center">
-                  <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Total Songs</div>
-                  <div className="text-3xl font-bold text-white">{sessionSummary.totalSongs}</div>
+      <div className="space-y-6 animate-fade-in px-1 md:px-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="bg-jam-800/50 border border-jam-700 p-3 md:p-4 rounded-2xl flex flex-col items-center justify-center">
+                  <div className="text-jam-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Total Songs</div>
+                  <div className="text-2xl md:text-3xl font-bold text-white">{sessionSummary.totalSongs}</div>
               </div>
-              <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl flex flex-col items-center justify-center">
-                  <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Duration</div>
-                  <div className="text-3xl font-bold text-white">{sessionSummary.totalDurationMin} <span className="text-sm font-normal text-jam-500">min</span></div>
+              <div className="bg-jam-800/50 border border-jam-700 p-3 md:p-4 rounded-2xl flex flex-col items-center justify-center">
+                  <div className="text-jam-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Duration</div>
+                  <div className="text-2xl md:text-3xl font-bold text-white">{sessionSummary.totalDurationMin} <span className="text-xs md:text-sm font-normal text-jam-500">min</span></div>
               </div>
-              <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
-                  <div className="text-jam-400 text-xs font-bold uppercase tracking-wider mb-1">Vibe Score</div>
-                  <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">{sessionSummary.vibeScore}</div>
-                  <Activity className="absolute bottom-2 right-2 text-jam-700 opacity-20" size={40} />
+              <div className="bg-jam-800/50 border border-jam-700 p-3 md:p-4 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="text-jam-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Vibe Score</div>
+                  <div className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">{sessionSummary.vibeScore}</div>
+                  <Activity className="absolute bottom-1 right-1 md:bottom-2 md:right-2 text-jam-700 opacity-20 w-8 h-8 md:w-10 md:h-10" />
               </div>
               <div className="hidden md:block">
                   <LanguageBalanceCard languages={sessionSummary.languages} />
@@ -1381,22 +1377,22 @@ export default function App() {
              <LanguageBalanceCard languages={sessionSummary.languages} />
           </div>
 
-          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                  <Activity className="text-orange-500" size={20} /> Session Timeline
+          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <Activity className="text-orange-500" size={18} /> Session Timeline
               </h3>
-              <div className="relative border-l-2 border-jam-700 ml-3 space-y-6 pb-2">
+              <div className="relative border-l border-jam-700 ml-2 md:ml-3 space-y-6 pb-2">
                   {mergedTimeline.map((item, idx) => {
                       if (item.type === 'arrival') {
                           const p = item.data as JamParticipant;
                           return (
-                              <div key={idx} className="relative pl-6">
-                                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 bg-jam-900 border-blue-500"></div>
-                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                      <div className="text-xs font-mono text-jam-500 mb-1 sm:mb-0">
+                              <div key={idx} className="relative pl-5 md:pl-6">
+                                  <div className="absolute -left-[4.5px] md:-left-[5px] top-1 w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-blue-500 ring-4 ring-jam-950"></div>
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                                      <div className="text-[10px] md:text-xs font-mono text-jam-500">
                                           {new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
-                                      <div className="flex-1 sm:ml-4 text-sm text-blue-300">
+                                      <div className="flex-1 sm:ml-4 text-xs md:text-sm text-blue-300">
                                           <span className="font-bold text-white">{p.name}</span> arrived
                                       </div>
                                   </div>
@@ -1405,18 +1401,18 @@ export default function App() {
                       } else {
                           const s = item.data as any;
                           return (
-                              <div key={idx} className="relative pl-6">
-                                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 bg-jam-900 border-green-500"></div>
-                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                                      <div className="text-xs font-mono text-jam-500 mb-1 sm:mb-0">
+                              <div key={idx} className="relative pl-5 md:pl-6">
+                                  <div className="absolute -left-[4.5px] md:-left-[5px] top-1 w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-green-500 ring-4 ring-jam-950"></div>
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                                      <div className="text-[10px] md:text-xs font-mono text-jam-500">
                                           {new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
-                                      <div className="flex-1 sm:ml-4 bg-jam-900/50 p-3 rounded-lg border border-jam-800">
-                                          <div className="font-bold text-white text-sm">{s.title}</div>
+                                      <div className="flex-1 sm:ml-4 bg-jam-900/50 p-2 md:p-3 rounded-lg border border-jam-800">
+                                          <div className="font-bold text-white text-[13px] md:text-sm truncate">{s.title}</div>
                                           <div className="flex items-center justify-between mt-1">
-                                              <div className="text-xs text-jam-400">{s.artist} • {s.ownerName}</div>
+                                              <div className="text-[10px] md:text-xs text-jam-400 truncate pr-2">{s.artist} • {s.ownerName}</div>
                                               {s.score > 0 && (
-                                                  <div className="text-xs font-bold text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded border border-green-900/30">
+                                                  <div className="text-[9px] md:text-xs font-bold text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded border border-green-900/30 shrink-0">
                                                       {s.score} pts
                                                   </div>
                                               )}
@@ -1427,39 +1423,39 @@ export default function App() {
                           );
                       }
                   })}
-                  {mergedTimeline.length === 0 && <div className="text-jam-500 text-sm italic pl-6">Nothing happened yet.</div>}
+                  {mergedTimeline.length === 0 && <div className="text-jam-500 text-xs md:text-sm italic pl-6">Nothing happened yet.</div>}
               </div>
           </div>
           
-          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                   <Trophy className="text-yellow-500" size={20} /> Top Rated (Session)
+          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                   <Trophy className="text-yellow-500" size={18} /> Top Rated (Session)
               </h3>
               <div className="space-y-3">
                   {sessionLeaderboard.slice(0, 5).map((item, idx) => (
-                       <div key={item.song.id} className="flex items-center gap-4 p-3 bg-jam-900/50 border border-jam-800 rounded-xl">
-                           <div className={`text-lg font-bold w-6 text-center ${idx===0 ? 'text-yellow-400' : idx===1 ? 'text-gray-300' : idx===2 ? 'text-orange-400' : 'text-jam-600'}`}>{idx+1}</div>
+                       <div key={item.song.id} className="flex items-center gap-3 md:gap-4 p-2.5 md:p-3 bg-jam-900/50 border border-jam-800 rounded-xl">
+                           <div className={`text-base md:text-lg font-bold w-5 md:w-6 text-center ${idx===0 ? 'text-yellow-400' : idx===1 ? 'text-gray-300' : idx===2 ? 'text-orange-400' : 'text-jam-600'}`}>{idx+1}</div>
                            <div className="flex-1 min-w-0">
-                               <div className="font-bold text-white text-sm truncate">{item.song.title}</div>
-                               <div className="text-xs text-jam-400">{item.song.ownerName}</div>
+                               <div className="font-bold text-white text-[13px] md:text-sm truncate">{item.song.title}</div>
+                               <div className="text-[10px] md:text-xs text-jam-400 truncate">{item.song.ownerName}</div>
                            </div>
-                           <div className="font-mono font-bold text-green-400">{item.score}</div>
+                           <div className="font-mono font-bold text-green-400 text-sm md:text-base">{item.score}</div>
                        </div>
                   ))}
-                  {sessionLeaderboard.length === 0 && <div className="text-jam-500 italic text-sm">No ratings yet.</div>}
+                  {sessionLeaderboard.length === 0 && <div className="text-jam-500 italic text-xs md:text-sm">No ratings yet.</div>}
               </div>
           </div>
 
           {sessionThieves.length > 0 && (
-              <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                  <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                       <Flame className="text-red-500" size={20} /> Biggest Thieves (Session)
+              <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+                  <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                       <Flame className="text-red-500" size={18} /> Biggest Thieves
                   </h3>
                   <div className="space-y-2">
                       {sessionThieves.map((t, idx) => (
                           <div key={idx} className="flex items-center justify-between p-2 rounded hover:bg-jam-800 transition-colors">
-                              <span className="text-white font-medium">{t.name}</span>
-                              <span className="text-red-400 font-bold">{t.count} steals</span>
+                              <span className="text-white text-sm font-medium">{t.name}</span>
+                              <span className="text-red-400 text-sm font-bold">{t.count} steals</span>
                           </div>
                       ))}
                   </div>
@@ -1470,10 +1466,6 @@ export default function App() {
       </div>
   );
 
-  // --- Render ---
-
-  // ... (Render logic for Dashboard, etc. kept same, only Modal added at end)
-
   // --- Session Ended Overlay ---
   if (session && session.status === 'ended' && currentUser && view === 'jam') {
       return (
@@ -1481,10 +1473,10 @@ export default function App() {
               <div className="animate-pulse-glow p-8 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-lg">
                   <Music size={80} className="text-white" />
               </div>
-              <p className="text-xl text-jam-300 font-medium mb-4 uppercase tracking-widest opacity-80">
+              <p className="text-lg md:text-xl text-jam-300 font-medium mb-4 uppercase tracking-widest opacity-80">
                   JAM SESSION IS OVER
               </p>
-              <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-purple-400 mb-12 tracking-tight animate-bounce">
+              <h1 className="text-3xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-purple-400 mb-12 tracking-tight animate-bounce">
                   Now get up and dance! 💃🕺
               </h1>
               
@@ -1509,7 +1501,6 @@ export default function App() {
                   )}
               </div>
               
-              {/* Ensure Modal is rendered here if triggered from overlay */}
               <Modal isOpen={confirmation.isOpen} onClose={() => setConfirmation({...confirmation, isOpen: false})} title={confirmation.title}>
                   <div className="text-center space-y-6">
                       <div className="mx-auto w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
@@ -1536,7 +1527,6 @@ export default function App() {
 
   // --- Render (Logged Out) ---
   if (!currentUser) {
-      // ... (Keep existing logged out render)
       if (joiningUser) {
         return (
           <div className="min-h-screen flex items-center justify-center bg-jam-950 p-6">
@@ -1560,7 +1550,6 @@ export default function App() {
                       <Bookmark size={18} /> Manage My Stash (Offline)
                   </Button>
   
-                  {/* Hidden manual time option unless really needed - kept as fallback link */}
                   <button onClick={() => confirmJoin('manual')} className="text-xs text-jam-500 underline hover:text-jam-400 mt-4 mx-auto block">
                       Join with specific arrival time
                   </button>
@@ -1570,8 +1559,8 @@ export default function App() {
         );
       }
       return (
-        <div className="min-h-screen flex items-center justify-center bg-jam-950 p-6">
-          <div className="bg-jam-800 p-8 rounded-2xl border border-jam-700 shadow-2xl w-full max-w-md relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-jam-950 p-4 md:p-6">
+          <div className="bg-jam-800 p-6 md:p-8 rounded-2xl border border-jam-700 shadow-2xl w-full max-w-md relative overflow-hidden">
             {/* Status Indicator */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
               {isFirebaseConnected ? (
@@ -1585,68 +1574,64 @@ export default function App() {
               )}
             </div>
             
-            <div className="text-center mb-8">
-              <div className="inline-block p-4 bg-orange-500/10 rounded-full mb-4 border border-orange-500/20"><Guitar size={48} className="text-orange-500" /></div>
-              <h1 className="text-3xl font-bold text-white mb-1">GS Jam</h1>
-              <p className="text-jam-400">Select your name to start</p>
+            <div className="text-center mb-6 md:mb-8">
+              <div className="inline-block p-3 md:p-4 bg-orange-500/10 rounded-full mb-4 border border-orange-500/20"><Guitar size={40} className="text-orange-500 md:w-12 md:h-12" /></div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">GS Jam</h1>
+              <p className="text-xs md:text-sm text-jam-400">Select your name to start</p>
             </div>
-            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto mb-6 pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+            <div className="grid grid-cols-2 gap-2 md:gap-3 max-h-60 overflow-y-auto mb-6 pr-1 scrollbar-thin scrollbar-thumb-jam-600">
               {ALL_USERS.map(u => (
-                <button key={u} onClick={() => handleJoinSelection(u)} className="bg-jam-700/50 hover:bg-orange-600 hover:text-white p-3 rounded-lg text-sm font-medium transition-all text-left text-jam-200 border border-transparent hover:border-orange-500/50">
+                <button key={u} onClick={() => handleJoinSelection(u)} className="bg-jam-700/50 hover:bg-orange-600 hover:text-white p-2.5 md:p-3 rounded-lg text-xs md:text-sm font-medium transition-all text-left text-jam-200 border border-transparent hover:border-orange-500/50 truncate">
                   {u}
                 </button>
               ))}
             </div>
-            <div className="text-center text-xs text-jam-500">
+            <div className="text-center text-[10px] text-jam-500">
               Current Session: <span className="text-jam-300 font-mono">{session?.date || getLocalDate()}</span>
             </div>
   
-            {/* Session Preview for unauthenticated users */}
             {session && (
-              <div className="mt-8 pt-6 border-t border-jam-700 w-full">
-                  <h3 className="text-jam-400 text-xs font-bold uppercase mb-3 text-center">Current Session</h3>
+              <div className="mt-6 md:mt-8 pt-6 border-t border-jam-700 w-full">
+                  <h3 className="text-jam-400 text-[10px] font-bold uppercase mb-3 text-center">Current Session</h3>
                   {session.status === 'ended' ? (
-                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
-                          <div className="text-red-400 font-bold mb-1">Session Ended</div>
-                          <div className="text-xs text-jam-400">Join to reopen if needed</div>
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 md:p-4 text-center">
+                          <div className="text-red-400 text-sm font-bold mb-1">Session Ended</div>
+                          <div className="text-[10px] text-jam-400">Join to reopen if needed</div>
                       </div>
                   ) : (
-                      <div className="bg-jam-900/50 rounded-xl p-4 space-y-3">
-                          <div className="flex justify-between items-center text-sm">
+                      <div className="bg-jam-900/50 rounded-xl p-3 md:p-4 space-y-2 md:space-y-3">
+                          <div className="flex justify-between items-center text-xs md:text-sm">
                               <span className="text-jam-300">Participants</span>
                               <span className="text-white font-bold">{participants.length}</span>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                              <span className="text-jam-300">Songs in Queue</span>
+                          <div className="flex justify-between items-center text-xs md:text-sm">
+                              <span className="text-jam-300">In Queue</span>
                               <span className="text-white font-bold">{queueIds.length}</span>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                              <span className="text-jam-300">Songs Played</span>
+                          <div className="flex justify-between items-center text-xs md:text-sm">
+                              <span className="text-jam-300">Played</span>
                               <span className="text-white font-bold">{songs.filter(s => s.playStatus === 'played').length}</span>
                           </div>
                       </div>
                   )}
               </div>
             )}
-  
           </div>
         </div>
       );
   }
 
-  // --- Strict "Lobby" View for Logged-In Non-Participants ---
-  // If user is logged in, but removed from participants (e.g. left session or session restarted), show this.
   const isParticipant = participants.some(p => p.userId === currentUser.id);
   
   if (!isParticipant && view !== 'personal_stash') {
       return (
           <div className="min-h-screen flex items-center justify-center bg-jam-950 p-6">
               <div className="bg-jam-800 p-8 rounded-2xl border border-jam-700 shadow-2xl w-full max-w-md animate-fade-in text-center">
-                  <div className="mx-auto w-20 h-20 bg-jam-700 rounded-full flex items-center justify-center mb-6 border border-jam-600">
-                      <UserPlus size={40} className="text-jam-400" />
+                  <div className="mx-auto w-16 h-16 md:w-20 md:h-20 bg-jam-700 rounded-full flex items-center justify-center mb-6 border border-jam-600">
+                      <UserPlus size={32} className="text-jam-400 md:w-10 md:h-10" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Welcome back, {currentUser.name}</h2>
-                  <p className="text-jam-400 mb-8">You are not currently part of the active session.</p>
+                  <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Welcome back, {currentUser.name}</h2>
+                  <p className="text-sm md:text-base text-jam-400 mb-8">You are not currently part of the active session.</p>
                   
                   <div className="space-y-4">
                       <Button variant="primary" className="w-full py-4 text-lg" onClick={() => confirmJoin('now')} disabled={!session || session.status === 'ended'}>
@@ -1655,15 +1640,14 @@ export default function App() {
                       <Button variant="secondary" onClick={() => setView('personal_stash')} className="w-full">
                           <Bookmark size={18} /> Manage My Stash
                       </Button>
-                      <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-jam-300 text-sm font-bold uppercase tracking-wider mt-4">
+                      <button onClick={() => setCurrentUser(null)} className="text-jam-500 hover:text-jam-300 text-[11px] md:text-sm font-bold uppercase tracking-wider mt-4">
                           Log Out
                       </button>
                   </div>
                   
-                  {/* Recovery Modal needs to be available here */}
                   <Modal isOpen={showRecoveryModal} onClose={() => setShowRecoveryModal(false)} title="Recover Songs?">
                       <div className="space-y-4 text-left">
-                          <p className="text-sm text-jam-300">
+                          <p className="text-xs md:text-sm text-jam-300">
                               We found <strong>{recoverySongs.length}</strong> songs from a previous session that weren't played. 
                               Would you like to save them to your stash?
                           </p>
@@ -1675,14 +1659,14 @@ export default function App() {
                                       <div 
                                           key={song.id} 
                                           onClick={() => toggleRecoverySelection(song.id)}
-                                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-800 border-jam-700 hover:border-jam-600'}`}
+                                          className={`flex items-center gap-3 p-2.5 md:p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-800 border-jam-700 hover:border-jam-600'}`}
                                       >
                                           <div className={`text-orange-500 ${isSelected ? 'opacity-100' : 'opacity-30'}`}>
-                                              {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                                              {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                                           </div>
                                           <div className="flex-1 min-w-0">
-                                              <div className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-jam-400'}`}>{song.title}</div>
-                                              <div className="text-xs text-jam-500">{song.artist}</div>
+                                              <div className={`font-bold text-xs md:text-sm ${isSelected ? 'text-white' : 'text-jam-400'} truncate`}>{song.title}</div>
+                                              <div className="text-[10px] md:text-xs text-jam-500 truncate">{song.artist}</div>
                                           </div>
                                       </div>
                                   );
@@ -1690,11 +1674,11 @@ export default function App() {
                           </div>
 
                           <div className="flex gap-3 pt-2">
-                              <Button variant="secondary" onClick={() => { clearPendingRecovery(currentUser!.id); setShowRecoveryModal(false); }} className="flex-1">
+                              <Button variant="secondary" onClick={() => { clearPendingRecovery(currentUser!.id); setShowRecoveryModal(false); }} className="flex-1 text-[11px]">
                                   Discard All
                               </Button>
-                              <Button variant="primary" onClick={confirmRecovery} className="flex-1" disabled={selectedRecoveryIds.size === 0}>
-                                  Save Selected ({selectedRecoveryIds.size})
+                              <Button variant="primary" onClick={confirmRecovery} className="flex-1 text-[11px]" disabled={selectedRecoveryIds.size === 0}>
+                                  Save ({selectedRecoveryIds.size})
                               </Button>
                           </div>
                       </div>
@@ -1710,7 +1694,6 @@ export default function App() {
     <div className="min-h-screen bg-jam-950 text-jam-100 flex">
       {/* Sidebar (Desktop) */}
       <aside className="w-64 bg-jam-900 border-r border-jam-800 flex flex-col fixed h-full z-20 hidden md:flex">
-        {/* ... Sidebar Header ... */}
         <div className="p-6 border-b border-jam-800">
            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
              <span className="text-orange-500">GS</span> Jam
@@ -1761,7 +1744,6 @@ export default function App() {
                          <Clock size={10} /> {new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                        </div>
                     </div>
-                    {/* Desktop Participant Actions */}
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => openEditParticipantModal(p)} className="p-1 text-jam-500 hover:text-white transition-colors" title="Edit Time">
                             <Pencil size={12} />
@@ -1777,7 +1759,6 @@ export default function App() {
             </div>
         )}
 
-        {/* Sidebar Footer Actions */}
         <div className="mt-auto px-4 pb-2 space-y-2">
              {view !== 'personal_stash' && (
                  <>
@@ -1796,7 +1777,6 @@ export default function App() {
         <div className="p-4 border-t border-jam-800 bg-jam-900/50">
            <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-jam-500">Logged in as</span>
-              {/* Desktop Logout Button */}
               <button onClick={() => setCurrentUser(null)} className="text-xs font-bold uppercase tracking-wider text-jam-400 hover:text-white flex items-center gap-1 bg-jam-800 px-2 py-1 rounded border border-jam-700 hover:bg-jam-700 transition-all">
                   <LogOut size={12} /> Logout
               </button>
@@ -1806,10 +1786,10 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-2 md:p-8 min-h-screen">
+      <main className="flex-1 md:ml-64 p-2 md:p-8 min-h-screen max-w-full overflow-x-hidden">
         
         {/* Mobile Header */}
-        <div className="md:hidden mb-6 p-2">
+        <div className="md:hidden mb-4 p-2">
             <div className="flex items-center justify-between mb-3">
                <div className="font-bold text-xl text-white">GS <span className="text-orange-500">Jam</span></div>
                <div className="flex items-center gap-2">
@@ -1817,36 +1797,32 @@ export default function App() {
                         <button 
                             onClick={() => setShowManageParticipantsModal(true)} 
                             className="p-2 rounded-lg bg-jam-800 text-jam-400 hover:text-white border border-jam-700"
-                            title="Manage Participants"
                         >
                             <Users size={18} />
                         </button>
                     )}
                     <button 
                         onClick={() => setShowMobileMenu(true)} 
-                        className="p-2 rounded-lg bg-jam-800 text-jam-400 hover:text-white border border-jam-700" 
-                        title="Menu"
+                        className="p-2 rounded-lg bg-jam-800 text-jam-400 hover:text-white border border-jam-700"
                     >
                         <MenuIcon size={18}/>
                     </button>
                </div>
             </div>
             
-            <div className="flex items-center justify-between bg-jam-800/50 p-3 rounded-xl border border-jam-700 mb-3">
-                <div className="text-xs font-bold text-jam-400">Logged in as: <span className="text-white ml-1">{currentUser.name}</span></div>
+            <div className="flex items-center justify-between bg-jam-800/50 p-2.5 rounded-xl border border-jam-700 mb-1">
+                <div className="text-[11px] font-bold text-jam-400">User: <span className="text-white ml-1">{currentUser.name}</span></div>
                 {view !== 'personal_stash' ? (
-                    <div className="flex gap-2">
-                      <button onClick={() => setView('jam')} className={`p-1.5 px-3 rounded-lg text-xs font-bold uppercase tracking-wider ${view === 'jam' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}>Jam</button>
-                      <button onClick={() => setView('stats')} className={`p-1.5 px-3 rounded-lg text-xs font-bold uppercase tracking-wider ${view === 'stats' ? 'bg-orange-600 text-white' : 'bg-jam-800 text-jam-400'}`}>Stats</button>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => setView('jam')} className={`p-1 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider ${view === 'jam' ? 'bg-orange-600 text-white shadow-sm' : 'bg-jam-800 text-jam-400'}`}>Jam</button>
+                      <button onClick={() => setView('stats')} className={`p-1 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider ${view === 'stats' ? 'bg-orange-600 text-white shadow-sm' : 'bg-jam-800 text-jam-400'}`}>Stats</button>
                    </div>
                 ) : (
-                    <div className="px-2 py-1 text-xs font-bold bg-jam-800 text-jam-300 rounded uppercase tracking-wider">Stash Mode</div>
+                    <div className="px-2 py-0.5 text-[10px] font-bold bg-jam-800 text-jam-300 rounded uppercase tracking-wider">Stash Mode</div>
                 )}
             </div>
         </div>
         
-        {/* ... (Old Session Warning, Local Storage Warning, Stash View, Jam View, Stats View remain largely unchanged until Modals) ... */}
-        {/* Old Session Warning & Action */}
         {isSessionOld && view !== 'personal_stash' && (
             <div className="mb-6 p-4 rounded-xl bg-orange-600/10 border border-orange-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -1856,71 +1832,69 @@ export default function App() {
                         <p className="text-xs text-jam-400">Archive this session to history and start today's jam?</p>
                     </div>
                 </div>
-                <Button variant="primary" onClick={startNewSession}>
+                <Button variant="primary" onClick={startNewSession} className="text-xs">
                     Archive & Start New Session
                 </Button>
             </div>
         )}
 
-        {/* Local Storage Warning */}
         {!isFirebaseConnected && (
-             <div className="mb-6 px-4 py-2 rounded-lg bg-jam-800 border border-jam-700 flex items-center gap-2 text-xs text-jam-400">
-                <Database size={12} className="text-jam-500" />
-                <span>Running in Local Mode. Set Firebase Env Vars in Vercel to sync across devices.</span>
+             <div className="mb-4 px-4 py-2 rounded-lg bg-jam-800 border border-jam-700 flex items-center gap-2 text-[10px] md:text-xs text-jam-400">
+                <Database size={10} className="text-jam-500" />
+                <span>Running in Local Mode. Set Firebase Env Vars to sync across devices.</span>
              </div>
         )}
 
         {view === 'personal_stash' && (
-            <div className="w-full max-w-3xl mx-auto space-y-6 pb-40 animate-fade-in">
-                {/* ... Stash Content ... */}
+            <div className="w-full max-w-3xl mx-auto space-y-6 pb-40 animate-fade-in px-2 md:px-0">
                 <div className="flex items-center justify-between">
                    <div>
-                      <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                          My Song Stash <Bookmark className="text-orange-500" size={28} />
+                      <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                          My Stash <Bookmark className="text-orange-500" size={24} />
                       </h2>
-                      <p className="text-jam-400 text-sm">Songs you want to play in future jams. Saved just for you.</p>
+                      <p className="text-jam-400 text-xs md:text-sm">Songs you want to play later. Saved just for you.</p>
                    </div>
-                   <Button onClick={openAddModal}>
-                     <Plus size={18} /> Add to Stash
+                   <Button onClick={openAddModal} className="text-xs">
+                     <Plus size={16} /> Add
                    </Button>
                 </div>
 
                 <div className="space-y-3 min-h-[200px]">
                     {myStash.length === 0 ? (
                         <div className="text-center py-12 border-2 border-dashed border-jam-800 rounded-2xl text-jam-500 bg-jam-900/20">
-                            <Bookmark size={48} className="mx-auto mb-3 opacity-20" />
-                            <p>Your stash is empty.</p>
-                            <p className="text-xs mt-1">Add songs here so you're ready when the jam starts!</p>
+                            <Bookmark size={40} className="mx-auto mb-3 opacity-20" />
+                            <p className="text-sm">Your stash is empty.</p>
+                            <p className="text-[10px] mt-1">Add songs here to be ready for the next jam!</p>
                         </div>
                     ) : (
                         myStash.map(item => (
-                            <div key={item.id} className="flex items-center gap-4 p-4 rounded-xl border border-jam-700 bg-jam-800 hover:border-jam-600 transition-all">
+                            <div key={item.id} className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl border border-jam-700 bg-jam-800 hover:border-jam-600 transition-all">
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-white text-base truncate">{item.title}</div>
-                                    <div className="text-sm text-jam-400 truncate">{item.artist}</div>
+                                    <div className="font-bold text-white text-sm md:text-base truncate">{item.title}</div>
+                                    <div className="text-xs text-jam-400 truncate">{item.artist}</div>
                                     
-                                    <div className="flex gap-3 mt-2">
+                                    <div className="flex gap-2 mt-2">
                                          {item.chordLink && (
-                                           <a href={item.chordLink} target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-xs flex items-center gap-1.5 text-orange-400 hover:text-orange-300 hover:bg-jam-700 transition-colors">
+                                           <a href={item.chordLink} target="_blank" rel="noreferrer" className="px-1.5 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-[10px] flex items-center gap-1 text-orange-400 hover:text-orange-300">
                                              <ExternalLink size={10} /> Link
                                            </a>
                                          )}
                                          {item.chordScreenshotUrl && (
                                            <button 
                                              onClick={() => setViewingImage(item.chordScreenshotUrl || null)}
-                                             className="px-2 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-xs flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-jam-700 transition-colors"
+                                             className="px-1.5 py-0.5 rounded bg-jam-700/50 border border-jam-600/50 text-[10px] flex items-center gap-1 text-blue-400 hover:text-blue-300"
                                            >
                                              <ImageIcon size={10} /> Image
                                            </button>
                                          )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => openEditStashModal(item)} className="p-2 text-jam-600 hover:text-white hover:bg-jam-700 rounded-full transition-all" title="Edit Item">
-                                        <Pencil size={18} />
+                                <div className="flex items-center gap-1 md:gap-2">
+                                    <button onClick={() => openEditStashModal(item)} className="p-2 text-jam-600 hover:text-white hover:bg-jam-700 rounded-full transition-all">
+                                        <Pencil size={16} />
                                     </button>
-                                    <button onClick={() => deleteFromStash(item.id)} className="p-2 text-jam-600 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all" title="Remove from Stash">
-                                        <Trash2 size={18} />
+                                    <button onClick={() => deleteFromStash(item.id)} className="p-2 text-jam-600 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all">
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>
@@ -1931,15 +1905,14 @@ export default function App() {
         )}
 
         {view === 'jam' && (
-          <div className="w-full max-w-3xl mx-auto space-y-6 pb-40">
-             {/* ... Queue Content ... */}
+          <div className="w-full max-w-3xl mx-auto space-y-4 md:space-y-6 pb-40 px-1 md:px-0">
              <div className="flex items-center justify-between">
                <div>
-                  <h2 className="text-3xl font-bold text-white">Queue</h2>
-                  <p className="text-jam-400 text-sm">Drag to reorder • Fair by default</p>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Queue</h2>
+                  <p className="text-jam-400 text-[10px] md:text-sm">Drag to reorder • Fair by default</p>
                </div>
-               <Button onClick={openAddModal}>
-                 <Plus size={18} /> Add Song
+               <Button onClick={openAddModal} className="text-xs">
+                 <Plus size={16} /> Add Song
                </Button>
              </div>
 
@@ -1952,9 +1925,9 @@ export default function App() {
                  <div className="space-y-3 min-h-[100px]">
                    {activeQueue.length === 0 ? (
                       <div className="text-center py-12 border-2 border-dashed border-jam-800 rounded-2xl text-jam-500">
-                        <Music size={48} className="mx-auto mb-3 opacity-20" />
-                        <p>No songs in the queue yet.</p>
-                        <button onClick={openAddModal} className="text-orange-500 font-bold hover:underline mt-2">Add the first one!</button>
+                        <Music size={40} className="mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">Queue is empty.</p>
+                        <button onClick={openAddModal} className="text-orange-500 text-xs font-bold hover:underline mt-2">Add the first one!</button>
                       </div>
                    ) : (
                       activeQueue.map((song, index) => (
@@ -1976,26 +1949,18 @@ export default function App() {
                </SortableContext>
              </DndContext>
 
-             {/* Played Songs Section - Always visible if songs exist */}
              {playedSongsList.length > 0 && (
-                 <div className="mt-12 pt-8 border-t border-jam-800">
-                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                        <History size={20} className="text-jam-500" />
+                 <div className="mt-10 md:mt-12 pt-8 border-t border-jam-800">
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <History size={18} className="text-jam-500" />
                         Played Songs
                     </h3>
-                    <div className="space-y-3 opacity-80">
+                    <div className="space-y-3 opacity-90">
                         {playedSongsList.map((song, index) => {
-                           // Logic for Ratings:
-                           // 1. Can only rate if song was played AFTER user arrived.
-                           // 2. Can edit existing rating.
-                           
                            const userParticipant = participants.find(p => p.userId === currentUser?.id);
                            const arrivalTime = userParticipant?.arrivalTime || 0;
                            const playedAt = song.playedAt || 0;
-                           
-                           // Allow rating if played AFTER arrival.
                            const canRate = currentUser && (playedAt >= arrivalTime);
-                           
                            const userRating = ratings.find(r => r.songChoiceId === song.id && r.userId === currentUser?.id);
 
                            return (
@@ -2006,7 +1971,6 @@ export default function App() {
                                   isCurrent={false}
                                   onRevive={() => reviveSong(song.id)}
                                   onViewImage={(url) => setViewingImage(url)}
-                                  // Pass onRate only if allowed to rate (or edit)
                                   onRate={canRate ? () => setShowRatingModal(song) : undefined}
                                   existingRatingValue={userRating?.value}
                                />
@@ -2019,51 +1983,48 @@ export default function App() {
         )}
 
         {view === 'stats' && (
-           <div className="w-full max-w-4xl mx-auto pb-40">
-              <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+           <div className="w-full max-w-4xl mx-auto pb-40 px-1 md:px-0">
+              <div className="flex gap-2.5 md:gap-4 mb-6 md:mb-8 overflow-x-auto pb-2 scrollbar-hide">
                  {[
-                   { id: 'today', label: 'Session Dashboard', icon: Activity },
+                   { id: 'today', label: 'Summary', icon: Activity },
                    { id: 'history', label: 'History', icon: History },
-                   { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
-                   { id: 'taste', label: 'Taste Buds', icon: Heart },
+                   { id: 'leaderboards', label: 'Ranks', icon: Trophy },
+                   { id: 'taste', label: 'Taste', icon: Heart },
                  ].map(tab => (
                     <button 
                       key={tab.id}
                       onClick={() => setStatsTab(tab.id as any)}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${statsTab === tab.id ? 'bg-orange-600 border-orange-500 text-white shadow-lg' : 'bg-jam-800 border-jam-700 text-jam-400 hover:bg-jam-700 hover:text-white'}`}
+                      className={`flex items-center gap-1.5 md:gap-2 px-3.5 md:px-5 py-2 md:py-2.5 rounded-full text-[11px] md:text-sm font-bold whitespace-nowrap transition-all border ${statsTab === tab.id ? 'bg-orange-600 border-orange-500 text-white shadow-lg' : 'bg-jam-800 border-jam-700 text-jam-400 hover:bg-jam-700 hover:text-white'}`}
                     >
-                      <tab.icon size={16} /> {tab.label}
+                      <tab.icon size={14} className="md:w-4 md:h-4" /> {tab.label}
                     </button>
                  ))}
               </div>
 
-              {statsTab === 'today' && (
-                 renderDashboardContent()
-              )}
+              {statsTab === 'today' && renderDashboardContent()}
 
-              {/* History Tab */}
               {statsTab === 'history' && (
                   <div className="space-y-6 animate-fade-in">
-                      <div className="flex flex-col md:flex-row items-center gap-4 bg-jam-800/50 p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
+                      <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 bg-jam-800/50 p-4 md:p-6 rounded-2xl border border-jam-700 backdrop-blur-sm">
                           <div className="flex-1 w-full">
-                              <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
+                              <label className="text-[10px] md:text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">Select Session Date</label>
                               <div className="relative">
                                   <select 
                                     value={historyDate} 
                                     onChange={(e) => setHistoryDate(e.target.value)}
-                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-sm"
+                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-2.5 md:py-3 text-white outline-none focus:border-orange-500 cursor-pointer font-mono text-xs md:text-sm"
                                   >
                                       <option value="">-- Choose a session --</option>
                                       {Object.keys(archives).sort().reverse().map(date => (
                                           <option key={date} value={date}>{date}</option>
                                       ))}
                                   </select>
-                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
+                                  <ChevronDown className="absolute right-4 top-2.5 md:top-3.5 text-jam-500 pointer-events-none" size={14} />
                               </div>
                           </div>
                           {historyDate && (
-                              <button onClick={() => deleteHistorySession(historyDate)} className="p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
-                                  <Trash2 size={20} />
+                              <button onClick={() => deleteHistorySession(historyDate)} className="p-2.5 md:p-3 text-jam-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-jam-700 hover:border-red-500/30 transition-all self-end md:self-auto">
+                                  <Trash2 size={18} className="md:w-5 md:h-5" />
                               </button>
                           )}
                       </div>
@@ -2076,158 +2037,145 @@ export default function App() {
                   </div>
               )}
 
-              {/* Leaderboards Tab */}
               {statsTab === 'leaderboards' && (
-                  <div className="space-y-8 animate-fade-in">
-                      {/* ... Leaderboard logic unchanged ... */}
-                      <div className="relative pt-10 px-4">
-                         <h3 className="text-center font-bold text-white text-xl mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
-                             <Trophy size={24} className="text-yellow-500" />
+                  <div className="space-y-6 md:space-y-8 animate-fade-in">
+                      <div className="relative pt-6 md:pt-10 px-2 md:px-4">
+                         <h3 className="text-center font-bold text-white text-base md:text-xl mb-6 md:mb-8 uppercase tracking-widest flex items-center justify-center gap-2">
+                             <Trophy size={20} className="text-yellow-500 md:w-6 md:h-6" />
                              Crowd Pleasers
                          </h3>
-                         {/* ... Podium logic ... */}
                          {crowdPleasers.length > 0 ? (
-                             <div className="flex items-end justify-center gap-2 md:gap-6 mb-8">
-                                 {/* Silver */}
+                             <div className="flex items-end justify-center gap-1.5 md:gap-6 mb-8">
                                  {crowdPleasers[1] && (
-                                     <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                         <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[1].userId}</div>
-                                         <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-24 flex items-end justify-center pb-2 relative shadow-lg">
-                                             <div className="text-3xl font-bold text-gray-800 opacity-50">2</div>
+                                     <div className="flex flex-col items-center w-1/3 max-w-[100px] md:max-w-[120px]">
+                                         <div className="text-[10px] font-bold text-jam-400 mb-1.5 truncate w-full text-center">{crowdPleasers[1].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-gray-500 to-gray-400 rounded-t-lg h-20 md:h-24 flex items-end justify-center pb-2 relative shadow-lg">
+                                             <div className="text-2xl md:text-3xl font-bold text-gray-800 opacity-50">2</div>
                                          </div>
-                                         <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-gray-500/50 text-xs font-mono text-gray-300">
+                                         <div className="mt-1.5 bg-jam-800 px-2 md:px-3 py-1 rounded-full border border-gray-500/50 text-[9px] md:text-xs font-mono text-gray-300 whitespace-nowrap">
                                              {crowdPleasers[1].avgScore} pts
                                          </div>
                                      </div>
                                  )}
-                                 {/* Gold */}
                                  {crowdPleasers[0] && (
-                                     <div className="flex flex-col items-center w-1/3 max-w-[140px] z-10">
-                                          <div className="text-yellow-400 mb-2 animate-bounce"><Star size={20} fill="currentColor" /></div>
-                                         <div className="text-sm font-bold text-white mb-2">{crowdPleasers[0].userId}</div>
-                                         <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
-                                             <div className="text-4xl font-bold text-yellow-800 opacity-50">1</div>
+                                     <div className="flex flex-col items-center w-1/3 max-w-[120px] md:max-w-[140px] z-10">
+                                          <div className="text-yellow-400 mb-1.5 animate-bounce"><Star size={16} className="md:w-5 md:h-5" fill="currentColor" /></div>
+                                         <div className="text-[11px] md:text-sm font-bold text-white mb-1.5 truncate w-full text-center">{crowdPleasers[0].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg h-28 md:h-32 flex items-end justify-center pb-2 relative shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+                                             <div className="text-3xl md:text-4xl font-bold text-yellow-800 opacity-50">1</div>
                                          </div>
-                                         <div className="mt-2 bg-jam-800 px-4 py-1.5 rounded-full border border-yellow-500/50 text-sm font-bold font-mono text-yellow-400">
+                                         <div className="mt-1.5 bg-jam-800 px-3 md:px-4 py-1 rounded-full border border-yellow-500/50 text-[10px] md:text-sm font-bold font-mono text-yellow-400 whitespace-nowrap">
                                              {crowdPleasers[0].avgScore} pts
                                          </div>
                                      </div>
                                  )}
-                                 {/* Bronze */}
                                  {crowdPleasers[2] && (
-                                     <div className="flex flex-col items-center w-1/3 max-w-[120px]">
-                                         <div className="text-xs font-bold text-jam-400 mb-2">{crowdPleasers[2].userId}</div>
-                                         <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-16 flex items-end justify-center pb-2 relative shadow-lg">
-                                             <div className="text-3xl font-bold text-orange-900 opacity-50">3</div>
+                                     <div className="flex flex-col items-center w-1/3 max-w-[100px] md:max-w-[120px]">
+                                         <div className="text-[10px] font-bold text-jam-400 mb-1.5 truncate w-full text-center">{crowdPleasers[2].userId}</div>
+                                         <div className="w-full bg-gradient-to-t from-orange-700 to-orange-600 rounded-t-lg h-14 md:h-16 flex items-end justify-center pb-2 relative shadow-lg">
+                                             <div className="text-2xl md:text-3xl font-bold text-orange-900 opacity-50">3</div>
                                          </div>
-                                         <div className="mt-2 bg-jam-800 px-3 py-1 rounded-full border border-orange-700/50 text-xs font-mono text-orange-400">
+                                         <div className="mt-1.5 bg-jam-800 px-2 md:px-3 py-1 rounded-full border border-orange-700/50 text-[9px] md:text-xs font-mono text-orange-400 whitespace-nowrap">
                                              {crowdPleasers[2].avgScore} pts
                                          </div>
                                      </div>
                                  )}
                              </div>
                          ) : (
-                             <div className="text-center text-jam-500 italic py-8">Not enough data to determine crowd pleasers yet.</div>
+                             <div className="text-center text-jam-500 italic py-6 text-xs md:text-sm">Not enough data for crowd pleasers yet.</div>
                          )}
                          <div className="border-t border-jam-800"></div>
                       </div>
 
-                       {/* Top Songs All Time */}
-                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                           <div className="flex items-center justify-between mb-6">
-                               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                   <Star className="text-yellow-400" size={20} /> Hall of Fame
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+                           <div className="flex items-center justify-between mb-5 md:mb-6">
+                               <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+                                   <Star className="text-yellow-400" size={18} /> Hall of Fame
                                </h3>
                                <select 
-                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
+                                  className="bg-jam-900 border border-jam-700 rounded-lg px-2 py-1 text-[10px] md:text-xs text-white outline-none focus:border-orange-500 max-w-[120px]"
                                   value={leaderboardPerspective}
                                   onChange={(e) => setLeaderboardPerspective(e.target.value)}
                                >
                                   <option value="all">Global Rank</option>
                                   {ALL_USERS.map(u => (
-                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>Acc. to {u}</option>
+                                      <option key={u} value={u.toLowerCase().replace(' ','_')}>{u}'s Favs</option>
                                   ))}
                                </select>
                            </div>
-                           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+                           <div className="space-y-2 md:space-y-3 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-1 md:pr-2 scrollbar-thin scrollbar-thumb-jam-600">
                                {globalLeaderboard.length > 0 ? globalLeaderboard.map((item, idx) => (
-                                   <div key={item.song.id} className="p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-4 transition-all">
-                                       <div className={`font-bold text-xl w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
+                                   <div key={item.song.id} className="p-2.5 md:p-3 rounded-xl bg-jam-900/50 border border-jam-800 hover:border-jam-600 flex items-center gap-3 md:gap-4 transition-all">
+                                       <div className={`font-bold text-base md:text-xl w-6 md:w-8 text-center ${idx < 3 ? 'text-yellow-400' : 'text-jam-700'}`}>#{idx + 1}</div>
                                        <div className="flex-1 min-w-0">
-                                           <div className="font-bold text-sm text-white truncate">{item.song.title}</div>
-                                           <div className="text-xs text-jam-400 truncate flex items-center gap-1">
-                                                {item.song.artist} <span className="text-jam-600">•</span> {item.song.ownerName}
+                                           <div className="font-bold text-xs md:text-sm text-white truncate">{item.song.title}</div>
+                                           <div className="text-[10px] md:text-xs text-jam-400 truncate">
+                                                {item.song.artist} <span className="text-jam-700">•</span> {item.song.ownerName}
                                            </div>
                                        </div>
-                                       <div className="flex flex-col items-end">
-                                            <div className="font-mono font-bold text-green-400 text-lg">{item.score}</div>
-                                            <div className="text-[9px] text-jam-500 uppercase">Points</div>
+                                       <div className="flex flex-col items-end shrink-0">
+                                            <div className="font-mono font-bold text-green-400 text-sm md:text-lg">{item.score}</div>
+                                            <div className="text-[8px] md:text-[9px] text-jam-500 uppercase tracking-tighter">Points</div>
                                        </div>
                                    </div>
                                )) : (
-                                   <div className="text-center text-jam-500 italic py-4">No songs rated yet.</div>
+                                   <div className="text-center text-jam-500 italic py-4 text-xs md:text-sm">No songs rated yet.</div>
                                )}
                            </div>
                        </div>
 
-                       {/* Language Breakdown per User */}
                        {userLanguageStats.length > 0 && (
-                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                             <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                 <Languages className="text-purple-400" size={20} /> Language Distribution (All Time)
+                          <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6 overflow-hidden">
+                             <h3 className="text-base md:text-lg font-bold text-white mb-5 md:mb-6 flex items-center gap-2">
+                                 <Languages className="text-purple-400" size={18} /> Languages (All Time)
                              </h3>
-                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                  <thead>
-                                     <tr className="text-jam-400 uppercase text-xs border-b border-jam-700">
-                                        <th className="pb-3 pl-2">User</th>
-                                        <th className="pb-3 text-center">Songs</th>
-                                        <th className="pb-3 text-center">Hebrew</th>
-                                        <th className="pb-3 text-center">English</th>
-                                        <th className="pb-3 w-32">Ratio</th>
-                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-jam-800">
-                                    {userLanguageStats.map(stat => (
-                                        <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
-                                           <td className="py-3 pl-2 font-medium text-white">{stat.name}</td>
-                                           <td className="py-3 text-center text-jam-300">{stat.total}</td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.hebrew} <span className="text-[10px] text-jam-500">({stat.hebrewPct}%)</span>
-                                           </td>
-                                           <td className="py-3 text-center text-jam-300">
-                                              {stat.english} <span className="text-[10px] text-jam-500">({stat.englishPct}%)</span>
-                                           </td>
-                                           <td className="py-3">
-                                              <div className="flex h-2 rounded-full overflow-hidden w-full bg-jam-900">
-                                                 <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500"></div>
-                                                 <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500"></div>
-                                              </div>
-                                           </td>
+                             <div className="overflow-x-auto -mx-4 md:-mx-0">
+                                <div className="inline-block min-w-full align-middle px-4 md:px-0">
+                                    <table className="min-w-full text-left">
+                                    <thead>
+                                        <tr className="text-jam-400 uppercase text-[9px] md:text-[10px] border-b border-jam-700">
+                                            <th className="pb-3 pr-2">User</th>
+                                            <th className="pb-3 text-center px-1">#</th>
+                                            <th className="pb-3 text-center px-1">Heb</th>
+                                            <th className="pb-3 text-center px-1">Eng</th>
+                                            <th className="pb-3 min-w-[60px] md:w-32">Ratio</th>
                                         </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-jam-800">
+                                        {userLanguageStats.map(stat => (
+                                            <tr key={stat.userId} className="group hover:bg-jam-900/30 transition-colors">
+                                            <td className="py-2.5 md:py-3 pr-2 font-medium text-white text-[11px] md:text-sm truncate max-w-[70px] md:max-w-none">{stat.name}</td>
+                                            <td className="py-2.5 md:py-3 text-center text-jam-300 text-[11px] md:text-sm px-1">{stat.total}</td>
+                                            <td className="py-2.5 md:py-3 text-center text-jam-300 text-[11px] md:text-sm px-1">{stat.hebrew}</td>
+                                            <td className="py-2.5 md:py-3 text-center text-jam-300 text-[11px] md:text-sm px-1">{stat.english}</td>
+                                            <td className="py-2.5 md:py-3 px-1">
+                                                <div className="flex h-1.5 md:h-2 rounded-full overflow-hidden w-full bg-jam-900">
+                                                    <div style={{width: `${stat.hebrewPct}%`}} className="bg-purple-500 shrink-0"></div>
+                                                    <div style={{width: `${stat.englishPct}%`}} className="bg-blue-500 shrink-0"></div>
+                                                </div>
+                                            </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    </table>
+                                </div>
                              </div>
                           </div>
                        )}
                   </div>
               )}
 
-              {/* Taste Buds Tab */}
               {statsTab === 'taste' && (
-                  <div className="space-y-8 animate-fade-in">
-                       {/* ... Taste Buds logic unchanged ... */}
-                       {/* User Ratings History Section */}
-                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                               <History className="text-blue-400" size={20} /> Voter History
+                  <div className="space-y-6 md:space-y-8 animate-fade-in">
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+                           <h3 className="text-base md:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                               <History className="text-blue-400" size={18} /> Voter History
                            </h3>
                            <div className="mb-4">
-                               <label className="text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">See ratings by:</label>
+                               <label className="text-[10px] md:text-xs font-bold text-jam-400 uppercase tracking-wider mb-2 block">See ratings by:</label>
                                <div className="relative">
                                   <select 
-                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 cursor-pointer text-sm"
+                                    className="w-full appearance-none bg-jam-900 border border-jam-600 rounded-xl px-4 py-2.5 md:py-3 text-white outline-none focus:border-orange-500 cursor-pointer text-xs md:text-sm"
                                     value={rankingHistoryUser}
                                     onChange={(e) => setRankingHistoryUser(e.target.value)}
                                   >
@@ -2236,84 +2184,82 @@ export default function App() {
                                           <option key={u} value={u.toLowerCase().replace(' ','_')}>{u}</option>
                                       ))}
                                   </select>
-                                  <ChevronDown className="absolute right-4 top-3.5 text-jam-500 pointer-events-none" size={16} />
+                                  <ChevronDown className="absolute right-4 top-2.5 md:top-3.5 text-jam-500 pointer-events-none" size={14} />
                                </div>
                            </div>
 
                            {rankingHistoryUser && (
-                               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-jam-600">
+                               <div className="space-y-2 max-h-[350px] md:max-h-[400px] overflow-y-auto pr-1 md:pr-2 scrollbar-thin scrollbar-thumb-jam-600">
                                    {userRatingsHistory.length > 0 ? (
                                        userRatingsHistory.map((item, idx) => (
-                                           <div key={idx} className="bg-jam-900/50 p-3 rounded-lg border border-jam-800 flex items-center justify-between">
-                                                <div className="flex-1 min-w-0 mr-4">
-                                                    <div className="text-sm font-bold text-white truncate">{item.songTitle}</div>
-                                                    <div className="text-xs text-jam-400 truncate">Selected by: {item.performer}</div>
-                                                    {item.playedAt && <div className="text-[10px] text-jam-500 mt-1">{new Date(item.playedAt).toLocaleDateString()}</div>}
+                                           <div key={idx} className="bg-jam-900/50 p-2.5 md:p-3 rounded-lg border border-jam-800 flex items-center justify-between">
+                                                <div className="flex-1 min-w-0 mr-3">
+                                                    <div className="text-xs md:text-sm font-bold text-white truncate">{item.songTitle}</div>
+                                                    <div className="text-[10px] md:text-xs text-jam-400 truncate">For: {item.performer}</div>
                                                 </div>
-                                                <div className={`px-2 py-1 rounded text-xs font-bold ${item.rating === 'Highlight' ? 'bg-green-500/20 text-green-400' : item.rating === 'Sababa' ? 'bg-yellow-500/20 text-yellow-400' : item.rating === 'Needs work' ? 'bg-red-500/20 text-red-400' : 'bg-jam-700 text-jam-300'}`}>
-                                                    {item.rating}
+                                                <div className={`shrink-0 px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[9px] md:text-xs font-bold ${item.rating === 'Highlight' ? 'bg-green-500/20 text-green-400' : item.rating === 'Sababa' ? 'bg-yellow-500/20 text-yellow-400' : item.rating === 'Needs work' ? 'bg-red-500/20 text-red-400' : 'bg-jam-700 text-jam-300'}`}>
+                                                    {item.rating.split(' ').pop()}
                                                 </div>
                                            </div>
                                        ))
                                    ) : (
-                                       <div className="text-center py-6 text-jam-500 italic text-sm">No ratings found for this user yet.</div>
+                                       <div className="text-center py-6 text-jam-500 italic text-[11px] md:text-sm">No ratings found yet.</div>
                                    )}
                                </div>
                            )}
                        </div>
 
-                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                               <Heart className="text-red-400" size={20} /> Musical Soulmates (All Time)
+                       <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+                           <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                               <Heart className="text-red-400" size={18} /> Soulmates (All Time)
                            </h3>
-                           <p className="text-sm text-jam-400 mb-6">These pairs have the most similar taste in music based on voting.</p>
+                           <p className="text-[11px] md:text-sm text-jam-400 mb-6">Users with the most similar voting history.</p>
                            
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                                {tasteData.soulmates.slice(0, 6).map((pair, idx) => {
                                    const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
                                    const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
                                    
                                    return (
-                                       <div key={idx} className="bg-jam-900/50 p-5 rounded-2xl border border-jam-700 relative overflow-hidden group">
-                                            <div className="flex items-center justify-between relative z-10 mb-2">
-                                                <div className="font-bold text-white text-base">{userA}</div>
-                                                <Heart size={16} className="text-red-500 fill-red-500/20" />
-                                                <div className="font-bold text-white text-base">{userB}</div>
+                                       <div key={idx} className="bg-jam-900/50 p-4 rounded-2xl border border-jam-700 relative overflow-hidden group">
+                                            <div className="flex items-center justify-between relative z-10 mb-2 gap-1">
+                                                <div className="font-bold text-white text-[13px] md:text-base truncate flex-1">{userA}</div>
+                                                <Heart size={14} className="text-red-500 fill-red-500/20 shrink-0 mx-1" />
+                                                <div className="font-bold text-white text-[13px] md:text-base truncate flex-1 text-right">{userB}</div>
                                             </div>
                                             <div className="flex items-end justify-between relative z-10">
-                                                <div className="text-4xl font-bold text-white tracking-tighter">{pair.score}%</div>
-                                                <div className="text-xs text-jam-400 bg-jam-950 px-2 py-1 rounded-lg border border-jam-800">{pair.commonSongs} jams</div>
+                                                <div className="text-3xl md:text-4xl font-bold text-white tracking-tighter">{pair.score}%</div>
+                                                <div className="text-[10px] text-jam-400 bg-jam-950 px-2 py-1 rounded-lg border border-jam-800">{pair.commonSongs} jams</div>
                                             </div>
-                                            <div className="absolute bottom-0 left-0 h-1.5 bg-jam-800 w-full">
+                                            <div className="absolute bottom-0 left-0 h-1 bg-jam-800 w-full">
                                                 <div className="h-full bg-gradient-to-r from-red-500 to-pink-500" style={{width: `${pair.score}%`}}></div>
                                             </div>
                                        </div>
                                    );
                                })}
                                {tasteData.soulmates.length === 0 && (
-                                   <div className="col-span-full text-center py-12 text-jam-500 italic">
-                                       Not enough shared ratings yet to verify soulmates. Start jamming!
+                                   <div className="col-span-full text-center py-10 text-jam-500 italic text-xs md:text-sm">
+                                       No shared ratings found. Keep jamming!
                                    </div>
                                )}
                            </div>
                        </div>
 
-                       {/* Musical Opposites (Lowest Match) */}
                        {tasteData.opposites.length > 0 && (
-                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                    <Zap className="text-purple-400" size={20} /> Musical Opposites
+                            <div className="bg-jam-800/50 border border-jam-700 rounded-2xl p-4 md:p-6">
+                                <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                    <Zap className="text-purple-400" size={18} /> Musical Opposites
                                 </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {tasteData.opposites.slice(0, 4).map((pair, idx) => {
                                         const userA = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userA) || pair.userA;
                                         const userB = ALL_USERS.find(u => u.toLowerCase().replace(' ','_') === pair.userB) || pair.userB;
                                         return (
-                                            <div key={idx} className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
-                                                <div className="text-sm font-medium text-jam-300">
-                                                    {userA} <span className="text-jam-600 px-1">&</span> {userB}
+                                            <div key={idx} className="bg-jam-900/50 p-3 rounded-xl border border-jam-700 flex items-center justify-between opacity-90 transition-opacity">
+                                                <div className="text-xs font-medium text-jam-300 truncate pr-2 flex-1">
+                                                    {userA} & {userB}
                                                 </div>
-                                                <div className="text-sm font-bold text-purple-400">{pair.score}% match</div>
+                                                <div className="text-[11px] font-bold text-purple-400 shrink-0">{pair.score}% match</div>
                                             </div>
                                         )
                                     })}
@@ -2321,33 +2267,29 @@ export default function App() {
                             </div>
                        )}
 
-                       {/* Global Language Lovers (Taste Buds) */}
                        <LanguageLoversSection preferences={globalLanguagePreferences} titleSuffix="(All Time)" />
-
                   </div>
               )}
-
            </div>
         )}
       </main>
 
       {/* --- Modals --- */}
       
-      {/* Confirmation Modal */}
       <Modal isOpen={confirmation.isOpen} onClose={() => setConfirmation({...confirmation, isOpen: false})} title={confirmation.title}>
           <div className="text-center space-y-6">
-              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${confirmation.type === 'danger' ? 'bg-red-500/20 text-red-500' : 'bg-jam-700 text-jam-300'}`}>
-                  <AlertTriangle size={32} />
+              <div className={`mx-auto w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center ${confirmation.type === 'danger' ? 'bg-red-500/20 text-red-500' : 'bg-jam-700 text-jam-300'}`}>
+                  <AlertTriangle size={28} className="md:w-8 md:h-8" />
               </div>
-              <p className="text-jam-200">{confirmation.message}</p>
+              <p className="text-xs md:text-sm text-jam-200">{confirmation.message}</p>
               <div className="flex gap-3">
-                  <Button variant="secondary" onClick={() => setConfirmation({...confirmation, isOpen: false})} className="flex-1">
+                  <Button variant="secondary" onClick={() => setConfirmation({...confirmation, isOpen: false})} className="flex-1 text-xs">
                       Cancel
                   </Button>
                   <Button 
                       variant={confirmation.type === 'danger' ? 'danger' : 'primary'} 
                       onClick={() => { confirmation.onConfirm(); setConfirmation({...confirmation, isOpen: false}); }} 
-                      className={`flex-1 ${confirmation.type === 'danger' ? 'bg-red-600 hover:bg-red-500 text-white border-red-500' : ''}`}
+                      className={`flex-1 text-xs ${confirmation.type === 'danger' ? 'bg-red-600 hover:bg-red-500 text-white border-red-500' : ''}`}
                   >
                       Confirm
                   </Button>
@@ -2355,29 +2297,28 @@ export default function App() {
           </div>
       </Modal>
 
-      {/* Recovery Modal */}
       <Modal isOpen={showRecoveryModal} onClose={() => setShowRecoveryModal(false)} title="Recover Songs?">
           <div className="space-y-4">
-              <p className="text-sm text-jam-300">
+              <p className="text-xs md:text-sm text-jam-300">
                   We found <strong>{recoverySongs.length}</strong> songs from a previous session that weren't played. 
                   Would you like to save them to your stash?
               </p>
               
-              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-jam-600 bg-jam-900/50 p-2 rounded-xl border border-jam-800">
+              <div className="max-h-[250px] md:max-h-[300px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-jam-600 bg-jam-900/50 p-2 rounded-xl border border-jam-800">
                   {recoverySongs.map(song => {
                       const isSelected = selectedRecoveryIds.has(song.id);
                       return (
                           <div 
                               key={song.id} 
                               onClick={() => toggleRecoverySelection(song.id)}
-                              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-800 border-jam-700 hover:border-jam-600'}`}
+                              className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-800 border-jam-700 hover:border-jam-600'}`}
                           >
                               <div className={`text-orange-500 ${isSelected ? 'opacity-100' : 'opacity-30'}`}>
-                                  {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                                  {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                  <div className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-jam-400'}`}>{song.title}</div>
-                                  <div className="text-xs text-jam-500">{song.artist}</div>
+                                  <div className={`font-bold text-[11px] md:text-sm ${isSelected ? 'text-white' : 'text-jam-400'} truncate`}>{song.title}</div>
+                                  <div className="text-[10px] text-jam-500 truncate">{song.artist}</div>
                               </div>
                           </div>
                       );
@@ -2385,31 +2326,28 @@ export default function App() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                  <Button variant="secondary" onClick={() => { clearPendingRecovery(currentUser!.id); setShowRecoveryModal(false); }} className="flex-1">
+                  <Button variant="secondary" onClick={() => { clearPendingRecovery(currentUser!.id); setShowRecoveryModal(false); }} className="flex-1 text-[11px]">
                       Discard All
                   </Button>
-                  <Button variant="primary" onClick={confirmRecovery} className="flex-1" disabled={selectedRecoveryIds.size === 0}>
-                      Save Selected ({selectedRecoveryIds.size})
+                  <Button variant="primary" onClick={confirmRecovery} className="flex-1 text-[11px]" disabled={selectedRecoveryIds.size === 0}>
+                      Save ({selectedRecoveryIds.size})
                   </Button>
               </div>
           </div>
       </Modal>
 
-      {/* Add Song Modal */}
       <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? (editingStashItemMode ? "Edit Stash Item" : "Edit Song") : "Add Song"}>
-          
-          {/* Tabs for Add Song Modal (Search vs Stash) - Only if not editing an existing song */}
           {!editingSongId && (
-              <div className="flex gap-2 mb-6 border-b border-jam-700 pb-1">
+              <div className="flex gap-2 mb-4 md:mb-6 border-b border-jam-700 pb-1">
                   <button 
                     onClick={() => setAddSongTab('search')}
-                    className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-colors ${addSongTab === 'search' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-jam-400 hover:text-white'}`}
+                    className={`flex-1 pb-3 text-[11px] md:text-sm font-bold uppercase tracking-wider transition-colors ${addSongTab === 'search' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-jam-400 hover:text-white'}`}
                   >
                       New Search
                   </button>
                   <button 
                     onClick={() => setAddSongTab('stash')}
-                    className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-colors ${addSongTab === 'stash' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-jam-400 hover:text-white'}`}
+                    className={`flex-1 pb-3 text-[11px] md:text-sm font-bold uppercase tracking-wider transition-colors ${addSongTab === 'stash' ? 'text-orange-500 border-b-2 border-orange-500' : 'text-jam-400 hover:text-white'}`}
                   >
                       From My Stash
                   </button>
@@ -2417,42 +2355,32 @@ export default function App() {
           )}
 
           {addSongTab === 'stash' && !editingSongId ? (
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-jam-600">
+              <div className="space-y-3 max-h-[350px] md:max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-jam-600">
                   {myStash.length === 0 ? (
                       <div className="text-center py-8 text-jam-500">
                           <Bookmark className="mx-auto mb-2 opacity-50" size={32} />
-                          <p className="text-sm">Your stash is empty.</p>
-                          <button onClick={() => setAddSongTab('search')} className="text-orange-500 text-xs font-bold hover:underline mt-2">Search to add songs</button>
+                          <p className="text-xs md:text-sm">Your stash is empty.</p>
+                          <button onClick={() => setAddSongTab('search')} className="text-orange-500 text-[10px] md:text-xs font-bold hover:underline mt-2">Search to add songs</button>
                       </div>
                   ) : (
                       myStash.map(item => (
                           <div key={item.id} onClick={() => selectFromStash(item)} className="p-3 bg-jam-900 border border-jam-700 hover:border-orange-500 rounded-xl cursor-pointer group transition-all relative">
                               <div className="flex justify-between items-center pr-16">
                                   <div>
-                                      <div className="font-bold text-white">{item.title}</div>
-                                      <div className="text-xs text-jam-400">{item.artist}</div>
+                                      <div className="font-bold text-white text-xs md:text-sm truncate">{item.title}</div>
+                                      <div className="text-[10px] md:text-xs text-jam-400 truncate">{item.artist}</div>
                                   </div>
                               </div>
-                              
-                              {/* Stash Item Actions */}
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                  <button 
-                                      onClick={(e) => { e.stopPropagation(); openEditStashModal(item); }} 
-                                      className="p-2 text-jam-500 hover:text-white bg-jam-800 hover:bg-jam-700 rounded-full transition-colors z-10"
-                                      title="Edit"
-                                  >
-                                      <Pencil size={14} />
+                              <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); openEditStashModal(item); }} className="p-1.5 text-jam-500 hover:text-white bg-jam-800 rounded-full transition-colors z-10" title="Edit">
+                                      <Pencil size={12} />
                                   </button>
-                                  <button 
-                                      onClick={(e) => { e.stopPropagation(); deleteFromStash(item.id); }} 
-                                      className="p-2 text-jam-500 hover:text-red-400 bg-jam-800 hover:bg-red-500/20 rounded-full transition-colors z-10"
-                                      title="Delete"
-                                  >
-                                      <Trash2 size={14} />
+                                  <button onClick={(e) => { e.stopPropagation(); deleteFromStash(item.id); }} className="p-1.5 text-jam-500 hover:text-red-400 bg-jam-800 rounded-full transition-colors z-10" title="Delete">
+                                      <Trash2 size={12} />
                                   </button>
-                                  <div className="w-px h-6 bg-jam-700 mx-1"></div>
-                                  <div className="text-orange-500 pl-1">
-                                      <Plus size={20} />
+                                  <div className="w-px h-5 bg-jam-700 mx-1"></div>
+                                  <div className="text-orange-500 pl-0.5">
+                                      <Plus size={18} />
                                   </div>
                               </div>
                           </div>
@@ -2462,39 +2390,16 @@ export default function App() {
           ) : (
               <div className="space-y-4">
                  <div>
-                   <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Title</label>
-                   <input 
-                     className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                     placeholder="e.g. Wonderwall"
-                     value={newSong.title}
-                     onChange={e => {
-                         setNewSong({...newSong, title: e.target.value});
-                         setHasSearched(false);
-                     }}
-                   />
+                   <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Title</label>
+                   <input className="w-full bg-jam-900 border border-jam-700 rounded-lg p-2.5 md:p-3 text-sm md:text-base text-white focus:border-orange-500 outline-none" placeholder="e.g. Wonderwall" value={newSong.title} onChange={e => { setNewSong({...newSong, title: e.target.value}); setHasSearched(false); }} />
                  </div>
-                 
                  <div>
-                   <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Artist (Optional)</label>
-                   <input 
-                     className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                     placeholder="e.g. Oasis"
-                     value={newSong.artist}
-                     onChange={e => {
-                         setNewSong({...newSong, artist: e.target.value});
-                         setHasSearched(false);
-                     }}
-                   />
+                   <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Artist (Optional)</label>
+                   <input className="w-full bg-jam-900 border border-jam-700 rounded-lg p-2.5 md:p-3 text-sm md:text-base text-white focus:border-orange-500 outline-none" placeholder="e.g. Oasis" value={newSong.artist} onChange={e => { setNewSong({...newSong, artist: e.target.value}); setHasSearched(false); }} />
                  </div>
-                 
                  <div>
-                   <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Who is this for?</label>
-                   <select 
-                     className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
-                     value={newSong.ownerId}
-                     onChange={e => setNewSong({...newSong, ownerId: e.target.value})}
-                     disabled={view === 'personal_stash' || editingStashItemMode} // Locked if in stash mode
-                   >
+                   <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Who is this for?</label>
+                   <select className="w-full bg-jam-900 border border-jam-700 rounded-lg p-2.5 md:p-3 text-sm md:text-base text-white focus:border-orange-500 outline-none" value={newSong.ownerId} onChange={e => setNewSong({...newSong, ownerId: e.target.value})} disabled={view === 'personal_stash' || editingStashItemMode}>
                      {view === 'personal_stash' || editingStashItemMode ? (
                          <option value={currentUser?.id}>{currentUser?.name}</option>
                      ) : (
@@ -2507,94 +2412,59 @@ export default function App() {
                      )}
                    </select>
                  </div>
-
-                 {/* ... (Chords Source section remains unchanged) ... */}
                  <div className="border-t border-jam-700 pt-4">
-                    <label className="block text-xs font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
-                    <div className="flex gap-2 mb-4 p-1 bg-jam-900 rounded-xl border border-jam-700">
-                      <button onClick={() => { setNewSong({...newSong, chordType: 'auto_search'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'auto_search' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                        <Sparkles size={14} /> AI Search
+                    <label className="block text-[10px] font-bold text-jam-400 mb-2 uppercase">Chords Source</label>
+                    <div className="flex gap-1.5 mb-4 p-1 bg-jam-900 rounded-xl border border-jam-700">
+                      <button onClick={() => { setNewSong({...newSong, chordType: 'auto_search'}); setHasSearched(false); }} className={`flex-1 py-2 md:py-2.5 rounded-lg text-[9px] md:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 md:gap-2 transition-all ${newSong.chordType === 'auto_search' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white'}`}>
+                        <Sparkles size={12} className="md:w-3.5 md:h-3.5" /> AI
                       </button>
-                      <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'link' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                        <LinkIcon size={14} /> Paste Link
+                      <button onClick={() => { setNewSong({...newSong, chordType: 'link'}); setHasSearched(false); }} className={`flex-1 py-2 md:py-2.5 rounded-lg text-[9px] md:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 md:gap-2 transition-all ${newSong.chordType === 'link' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white'}`}>
+                        <LinkIcon size={12} className="md:w-3.5 md:h-3.5" /> Link
                       </button>
-                      <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}>
-                        <ImageIcon size={14} /> Image
+                      <button onClick={() => { setNewSong({...newSong, chordType: 'screenshot'}); setHasSearched(false); }} className={`flex-1 py-2 md:py-2.5 rounded-lg text-[9px] md:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 md:gap-2 transition-all ${newSong.chordType === 'screenshot' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white'}`}>
+                        <ImageIcon size={12} className="md:w-3.5 md:h-3.5" /> Image
                       </button>
                     </div>
-
                     {newSong.chordType === 'auto_search' && (
-                      <div className="space-y-4 animate-fade-in">
-                        <div className="bg-jam-900/50 p-4 rounded-xl border border-jam-700 text-center">
-                            <p className="text-sm text-jam-300 mb-3">We'll find the best chord versions from Ultimate Guitar, Tab4u, and more.</p>
-                            <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title} className="w-full">
-                                {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <><Search size={16} /> Find Chords</>}
+                      <div className="space-y-3 md:space-y-4 animate-fade-in">
+                        <div className="bg-jam-900/50 p-3 md:p-4 rounded-xl border border-jam-700 text-center">
+                            <p className="text-xs text-jam-300 mb-3">AI will find chords from UG, Tab4u, etc.</p>
+                            <Button variant="secondary" onClick={performSearch} disabled={isSearching || !newSong.title} className="w-full text-xs">
+                                {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <><Search size={14} /> Find Chords</>}
                             </Button>
                         </div>
-
-                        {/* Selected Link Preview */}
                         {newSong.link && (
-                             <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-3">
-                                 <div className="p-2 bg-green-500/20 rounded-full text-green-400"><CheckCircle size={16} /></div>
+                             <div className="p-2.5 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-3">
+                                 <div className="p-1.5 bg-green-500/20 rounded-full text-green-400 shrink-0"><CheckCircle size={14} /></div>
                                  <div className="flex-1 min-w-0">
-                                     <div className="text-xs font-bold text-green-400 uppercase tracking-wider">Selected</div>
-                                     <div className="text-sm text-white truncate underline decoration-green-500/50">{newSong.link}</div>
+                                     <div className="text-[9px] md:text-[10px] font-bold text-green-400 uppercase">Selected</div>
+                                     <div className="text-xs text-white truncate underline">{newSong.link}</div>
                                  </div>
-                                 <button onClick={() => window.open(newSong.link, '_blank')} className="text-jam-400 hover:text-white"><ExternalLink size={14} /></button>
+                                 <button onClick={() => window.open(newSong.link, '_blank')} className="text-jam-400 hover:text-white shrink-0"><ExternalLink size={12} /></button>
                              </div>
                         )}
-
-                        {/* Error Message Display */}
                         {searchError && (
-                          <div className="mt-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-center animate-fade-in">
-                             <div className="text-red-400 text-sm font-bold flex items-center justify-center gap-2">
-                                 <ShieldAlert size={16} /> Search Failed
+                          <div className="mt-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-center">
+                             <div className="text-red-400 text-[11px] font-bold flex items-center justify-center gap-2 mb-1.5">
+                                 <ShieldAlert size={14} /> Search Failed
                              </div>
-                             <div className="text-xs text-jam-400 mt-1 mb-2">{searchError}</div>
-                             
-                             {/* Fallback Manual Search Button - ALWAYS shown on error */}
                              {manualSearchUrl && (
-                                 <button 
-                                    onClick={() => window.open(manualSearchUrl, '_blank')}
-                                    className="text-xs bg-jam-800 hover:bg-jam-700 text-white border border-jam-600 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
-                                 >
-                                    <Search size={12} /> Google Search Manually
+                                 <button onClick={() => window.open(manualSearchUrl, '_blank')} className="text-[10px] bg-jam-800 hover:bg-jam-700 text-white border border-jam-600 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto">
+                                    <Search size={10} /> Google Search
                                  </button>
                              )}
                           </div>
                         )}
-                        
-                        {/* No Results Message */}
-                        {hasSearched && !searchError && searchResults.length === 0 && !isSearching && (
-                          <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10 text-center">
-                             <div className="text-orange-400 text-sm font-bold mb-1">No direct chords found automatically.</div>
-                             <div className="text-xs text-jam-400 mb-2">We couldn't verify a deep link for this song.</div>
-                             <button 
-                                onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(newSong.title + " " + newSong.artist + " chords ultimate-guitar tab4u negina nagenu")}`, '_blank')}
-                                className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 mx-auto"
-                             >
-                                <Search size={12} /> Search Manually on Google
-                             </button>
-                          </div>
-                        )}
-
                         {searchResults.length > 0 && (
                           <div className="space-y-2 mt-2">
                             {searchResults.map((result, idx) => (
-                               <div key={idx} onClick={() => selectSearchResult(result)} className={`p-3 rounded-lg border cursor-pointer transition-colors group flex items-center gap-3 ${newSong.link === result.url ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-900 border-jam-700 hover:border-jam-500'}`}>
-                                  <div className="flex-1">
-                                      <div className={`font-bold text-sm ${newSong.link === result.url ? 'text-orange-400' : 'text-white'}`}>{result.title}</div>
-                                      <div className="text-[10px] text-jam-500 uppercase font-bold tracking-wider">{result.snippet}</div>
+                               <div key={idx} onClick={() => selectSearchResult(result)} className={`p-2.5 rounded-lg border cursor-pointer transition-colors group flex items-center gap-3 ${newSong.link === result.url ? 'bg-orange-600/10 border-orange-500' : 'bg-jam-900 border-jam-700'}`}>
+                                  <div className="flex-1 min-w-0">
+                                      <div className={`font-bold text-[11px] md:text-sm truncate ${newSong.link === result.url ? 'text-orange-400' : 'text-white'}`}>{result.title}</div>
+                                      <div className="text-[8px] md:text-[10px] text-jam-500 uppercase font-bold truncate">{result.snippet}</div>
                                   </div>
-                                  <button 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        window.open(result.url, '_blank');
-                                    }}
-                                    className="p-2 text-jam-400 hover:text-white hover:bg-jam-700 rounded-full transition-colors"
-                                    title="Open in New Tab"
-                                  >
-                                      <Eye size={18} />
+                                  <button onClick={(e) => { e.stopPropagation(); window.open(result.url, '_blank'); }} className="p-1.5 text-jam-400 hover:text-white bg-jam-800 rounded-full shrink-0">
+                                      <Eye size={14} />
                                   </button>
                                </div>
                             ))}
@@ -2602,56 +2472,37 @@ export default function App() {
                         )}
                       </div>
                     )}
-
                     {newSong.chordType === 'link' && (
                       <div className="animate-fade-in">
                           <div className="bg-jam-900 p-1 rounded-xl border border-jam-700 focus-within:border-orange-500 transition-colors flex items-center">
-                              <div className="p-3 text-jam-500"><LinkIcon size={18} /></div>
-                              <input 
-                                  className="flex-1 bg-transparent p-3 pl-0 text-white outline-none text-sm font-mono placeholder-jam-600"
-                                  placeholder="https://tabs.ultimate-guitar.com/tab/..."
-                                  value={newSong.link}
-                                  onChange={e => setNewSong({...newSong, link: e.target.value})}
-                              />
+                              <div className="p-2 md:p-3 text-jam-500"><LinkIcon size={16} /></div>
+                              <input className="flex-1 bg-transparent p-2.5 pl-0 text-xs md:text-sm text-white outline-none font-mono placeholder-jam-600" placeholder="https://..." value={newSong.link} onChange={e => setNewSong({...newSong, link: e.target.value})} />
                           </div>
-                          <p className="text-xs text-jam-500 mt-2 pl-1">Paste a direct link to the chords page.</p>
                       </div>
                     )}
-
                     {newSong.chordType === 'screenshot' && (
-                      <div className="h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50 animate-fade-in">
+                      <div className="h-48 md:h-64 border-2 border-dashed border-jam-600 rounded-xl flex flex-col items-center justify-center relative overflow-hidden bg-jam-900/50 animate-fade-in">
                         {newSong.screenshot ? (
                           <div className="relative w-full h-full p-2 flex items-center justify-center">
                              <img src={newSong.screenshot} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />
-                             <button onClick={() => setNewSong({...newSong, screenshot: ''})} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full shadow-lg transition-colors">
-                               <Trash2 size={16} />
-                             </button>
+                             <button onClick={() => setNewSong({...newSong, screenshot: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1.5 rounded-full text-white shadow-lg"><Trash2 size={14} /></button>
                           </div>
                         ) : (
                           <>
-                            <Upload size={32} className="text-jam-500 mb-2" />
-                            <span className="text-sm text-jam-400">Tap to upload image</span>
+                            <Upload size={24} className="text-jam-500 mb-2 md:w-8 md:h-8" />
+                            <span className="text-[11px] md:text-sm text-jam-400 text-center px-4">Upload screenshot of chords</span>
                             <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                           </>
                         )}
                       </div>
                     )}
                  </div>
-
                  <div className="flex gap-2 mt-4">
-                     {/* Save to Queue Button */}
-                     <Button className="flex-1 py-3" onClick={handleSaveSong} disabled={!isFormValid}>
-                        {editingSongId ? (editingStashItemMode ? 'Save to Stash' : 'Save Changes') : (view === 'personal_stash' ? 'Save to Stash' : 'Add to Queue')}
+                     <Button className="flex-1 py-3 text-xs md:text-sm" onClick={handleSaveSong} disabled={!isFormValid}>
+                        {editingSongId ? (editingStashItemMode ? 'Save Stash' : 'Save Changes') : (view === 'personal_stash' ? 'Save Stash' : 'Add to Queue')}
                      </Button>
-                     
-                     {/* Save to Stash Button (Secondary Action, only if not already in stash mode) */}
                      {view !== 'personal_stash' && !editingSongId && (
-                         <button 
-                            onClick={saveToStash}
-                            disabled={!isFormValid}
-                            className="px-4 py-3 rounded-lg border border-jam-700 bg-jam-800 text-jam-300 hover:text-white hover:bg-jam-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Save to My Stash for later"
-                         >
+                         <button onClick={saveToStash} disabled={!isFormValid} className="px-4 py-3 rounded-lg border border-jam-700 bg-jam-800 text-jam-300 hover:text-white disabled:opacity-50" title="Stash for later">
                              <Bookmark size={18} />
                          </button>
                      )}
@@ -2660,79 +2511,58 @@ export default function App() {
           )}
       </Modal>
 
-      {/* ... (Rating, Add Participant, Mobile Manage, Mobile Menu Modals remain unchanged) ... */}
-      {/* Rating Modal */}
       <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Rate this Performance">
         <div className="text-center">
-           <h3 className="text-xl font-bold text-white mb-1">{showRatingModal?.title}</h3>
-           <p className="text-jam-400 mb-6">by {showRatingModal?.ownerName}</p>
-           
-           <div className="grid grid-cols-1 gap-3">
+           <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">{showRatingModal?.title}</h3>
+           <p className="text-xs md:text-sm text-jam-400 mb-6 truncate">by {showRatingModal?.ownerName}</p>
+           <div className="grid grid-cols-1 gap-2.5 md:gap-3">
              {RATING_OPTIONS.map(option => (
-               <button 
-                 key={option.value}
-                 onClick={() => submitRating(option.value)}
-                 className={`p-4 rounded-xl border border-jam-700 bg-jam-800 hover:bg-jam-700 transition-all flex items-center justify-center gap-3 group`}
-               >
-                 <span className={`text-lg font-bold ${option.color}`}>{option.label}</span>
+               <button key={option.value} onClick={() => submitRating(option.value)} className="p-3.5 md:p-4 rounded-xl border border-jam-700 bg-jam-800 hover:bg-jam-700 transition-all flex items-center justify-center gap-3">
+                 <span className={`text-base md:text-lg font-bold ${option.color}`}>{option.label}</span>
                </button>
              ))}
            </div>
         </div>
       </Modal>
 
-      {/* Add Participant Modal */}
       <Modal isOpen={showAddParticipantModal} onClose={() => setShowAddParticipantModal(false)} title="Add Participant">
           <div className="space-y-4">
              <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Name</label>
-                <select 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"
-                    value={proxyUserToAdd}
-                    onChange={(e) => setProxyUserToAdd(e.target.value)}
-                >
+                <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Name</label>
+                <select className="w-full bg-jam-900 border border-jam-700 rounded-lg p-2.5 md:p-3 text-sm md:text-base text-white focus:border-orange-500 outline-none" value={proxyUserToAdd} onChange={(e) => setProxyUserToAdd(e.target.value)}>
                     <option value="" disabled>Select Name</option>
-                    {ALL_USERS.map(u => (
-                        <option key={u} value={u}>{u}</option>
-                    ))}
+                    {ALL_USERS.map(u => ( <option key={u} value={u}>{u}</option> ))}
                 </select>
              </div>
              <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
-                <input 
-                    type="time" 
-                    step="1" 
-                    value={proxyArrivalTime} 
-                    onChange={(e) => setProxyArrivalTime(e.target.value)} 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none" 
-                />
+                <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
+                <input type="time" step="1" value={proxyArrivalTime} onChange={(e) => setProxyArrivalTime(e.target.value)} className="w-full bg-jam-900 border border-jam-700 rounded-lg p-2.5 md:p-3 text-sm md:text-base text-white outline-none" />
              </div>
-             <Button className="w-full" onClick={confirmProxyParticipant} disabled={!proxyUserToAdd}>Add User</Button>
+             <Button className="w-full text-xs" onClick={confirmProxyParticipant} disabled={!proxyUserToAdd}>Add User</Button>
           </div>
       </Modal>
 
-       {/* Mobile Manage Participants Modal */}
-       <Modal isOpen={showManageParticipantsModal} onClose={() => setShowManageParticipantsModal(false)} title="Manage Participants">
+       <Modal isOpen={showManageParticipantsModal} onClose={() => setShowManageParticipantsModal(false)} title="Participants">
             <div className="space-y-4">
-                <div className="flex justify-between items-center mb-4">
-                     <p className="text-sm text-jam-400">Edit times or remove users.</p>
-                     <button onClick={() => { setShowManageParticipantsModal(false); handleAddProxyParticipant(); }} className="text-orange-500 font-bold text-sm flex items-center gap-1">
-                        <Plus size={16} /> Add New
+                <div className="flex justify-between items-center mb-2">
+                     <p className="text-[11px] md:text-sm text-jam-400">Edit times or remove users.</p>
+                     <button onClick={() => { setShowManageParticipantsModal(false); handleAddProxyParticipant(); }} className="text-orange-500 font-bold text-xs flex items-center gap-1">
+                        <Plus size={14} /> Add New
                      </button>
                 </div>
                 <div className="space-y-2">
                     {[...participants].sort((a,b) => a.arrivalTime - b.arrivalTime).map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-jam-900 border border-jam-800">
-                            <div>
-                                <div className="text-sm font-medium text-white">{p.name}</div>
-                                <div className="text-xs text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div key={p.id} className="flex items-center justify-between p-2.5 md:p-3 rounded-lg bg-jam-900 border border-jam-800">
+                            <div className="min-w-0 flex-1 pr-2">
+                                <div className="text-[13px] md:text-sm font-medium text-white truncate">{p.name}</div>
+                                <div className="text-[10px] text-jam-500 font-mono">{new Date(p.arrivalTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => { setShowManageParticipantsModal(false); openEditParticipantModal(p); }} className="p-2 bg-jam-800 rounded-full text-jam-400 hover:text-white">
-                                    <Pencil size={16} />
+                            <div className="flex gap-1">
+                                <button onClick={() => { setShowManageParticipantsModal(false); openEditParticipantModal(p); }} className="p-1.5 md:p-2 bg-jam-800 rounded-full text-jam-400 hover:text-white shrink-0">
+                                    <Pencil size={14} />
                                 </button>
-                                <button onClick={() => deleteParticipant(p)} className="p-2 bg-jam-800 rounded-full text-jam-400 hover:text-red-400">
-                                    <Trash2 size={16} />
+                                <button onClick={() => deleteParticipant(p)} className="p-1.5 md:p-2 bg-jam-800 rounded-full text-jam-400 hover:text-red-400 shrink-0">
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
@@ -2741,65 +2571,39 @@ export default function App() {
             </div>
        </Modal>
 
-        {/* Mobile Main Menu Modal */}
        <Modal isOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} title="Menu">
             <div className="space-y-4">
-                {/* Primary Action: Logout */}
-                <button 
-                    onClick={() => { setCurrentUser(null); setShowMobileMenu(false); }}
-                    className="w-full flex items-center gap-3 p-4 bg-jam-700/50 hover:bg-jam-700 rounded-xl text-white font-bold transition-all border border-jam-600"
-                >
-                    <LogOut size={20} /> Log Out <span className="text-jam-400 font-normal text-sm ml-auto">Switch user</span>
+                <button onClick={() => { setCurrentUser(null); setShowMobileMenu(false); }} className="w-full flex items-center gap-3 p-4 bg-jam-700/50 hover:bg-jam-700 rounded-xl text-white font-bold transition-all border border-jam-600">
+                    <LogOut size={20} /> Log Out <span className="text-jam-400 font-normal text-xs ml-auto">Switch user</span>
                 </button>
-
-                {/* Stash Button in Menu (if in Jam mode) */}
                 {view !== 'personal_stash' && (
-                    <button 
-                        onClick={() => { setView('personal_stash'); setShowMobileMenu(false); }}
-                        className="w-full flex items-center gap-3 p-4 bg-jam-800 hover:bg-jam-700 rounded-xl text-jam-200 font-bold transition-all border border-jam-700"
-                    >
+                    <button onClick={() => { setView('personal_stash'); setShowMobileMenu(false); }} className="w-full flex items-center gap-3 p-4 bg-jam-800 hover:bg-jam-700 rounded-xl text-jam-200 font-bold transition-all border border-jam-700">
                         <Bookmark size={20} /> My Song Stash
                     </button>
                 )}
-                
-                {/* Return to Jam (if in Stash mode) */}
                 {view === 'personal_stash' && session?.status === 'active' && (
-                    <button 
-                        onClick={() => { setView('jam'); setShowMobileMenu(false); }}
-                        className="w-full flex items-center gap-3 p-4 bg-orange-600 hover:bg-orange-500 rounded-xl text-white font-bold transition-all border border-orange-500"
-                    >
+                    <button onClick={() => { setView('jam'); setShowMobileMenu(false); }} className="w-full flex items-center gap-3 p-4 bg-orange-600 hover:bg-orange-500 rounded-xl text-white font-bold transition-all border border-orange-500">
                         <Music size={20} /> Return to Jam
                     </button>
                 )}
-
                 <div className="h-px bg-jam-700 my-4"></div>
-
-                {/* Danger Zone */}
                 {view !== 'personal_stash' && (
                     <div className="space-y-3">
-                        <p className="text-xs font-bold text-jam-500 uppercase tracking-wider pl-1">Session Management</p>
-                        
+                        <p className="text-[10px] font-bold text-jam-500 uppercase tracking-wider pl-1">Session Management</p>
                         {isCurrentUserParticipant && (
-                            <button 
-                                onClick={leaveSession}
-                                className="w-full flex items-center gap-3 p-4 bg-jam-900 hover:bg-jam-800 rounded-xl text-jam-300 font-medium transition-all border border-jam-800"
-                            >
+                            <button onClick={leaveSession} className="w-full flex items-center gap-3 p-4 bg-jam-900 rounded-xl text-jam-300 font-medium border border-jam-800">
                                 <LogOut size={20} className="text-orange-500" /> 
                                 <div className="text-left">
-                                    <div className="text-white font-bold">Leave Session</div>
-                                    <div className="text-[10px] text-jam-500">Remove me & my unplayed songs</div>
+                                    <div className="text-white font-bold text-sm">Leave Session</div>
+                                    <div className="text-[9px] text-jam-500">Remove me & unplayed songs</div>
                                 </div>
                             </button>
                         )}
-
-                        <button 
-                            onClick={endSession}
-                            className="w-full flex items-center gap-3 p-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-300 font-medium transition-all border border-red-500/20"
-                        >
+                        <button onClick={endSession} className="w-full flex items-center gap-3 p-4 bg-red-500/10 rounded-xl text-red-300 font-medium border border-red-500/20">
                             <Power size={20} /> 
                             <div className="text-left">
-                                <div className="text-red-400 font-bold">End Session</div>
-                                <div className="text-[10px] text-red-300/50">Close jam for everyone</div>
+                                <div className="text-red-400 font-bold text-sm">End Session</div>
+                                <div className="text-[9px] text-red-300/50">Close jam for everyone</div>
                             </div>
                         </button>
                     </div>
@@ -2807,28 +2611,20 @@ export default function App() {
             </div>
        </Modal>
 
-      {/* Edit Participant Arrival Time Modal */}
       <Modal isOpen={!!editingParticipant} onClose={() => setEditingParticipant(null)} title="Edit Arrival Time">
           <div className="space-y-4">
-             <div className="text-center text-white font-bold text-lg mb-2">{editingParticipant?.name}</div>
+             <div className="text-center text-white font-bold text-base mb-2">{editingParticipant?.name}</div>
              <div>
-                <label className="block text-xs font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
-                <input 
-                    type="time" 
-                    step="1" 
-                    value={editArrivalTimeValue} 
-                    onChange={(e) => setEditArrivalTimeValue(e.target.value)} 
-                    className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-center text-xl" 
-                />
+                <label className="block text-[10px] font-bold text-jam-400 mb-1 uppercase">Arrival Time</label>
+                <input type="time" step="1" value={editArrivalTimeValue} onChange={(e) => setEditArrivalTimeValue(e.target.value)} className="w-full bg-jam-900 border border-jam-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none text-center text-xl" />
              </div>
-             <div className="text-xs text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
-                Warning: Changing arrival time will immediately reshuffle the fair queue order.
+             <div className="text-[10px] text-yellow-500 bg-yellow-500/10 p-2.5 rounded-lg border border-yellow-500/20">
+                Warning: Reshuffles the fair queue order immediately.
              </div>
-             <Button className="w-full" onClick={saveParticipantEdit}>Update Time</Button>
+             <Button className="w-full text-xs" onClick={saveParticipantEdit}>Update</Button>
           </div>
       </Modal>
 
-      {/* Image Viewer Overlay */}
       {viewingImage && (
         <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4" onClick={() => setViewingImage(null)}>
            <button onClick={() => setViewingImage(null)} className="absolute top-4 right-4 text-white hover:text-orange-500 transition-colors">
@@ -2837,7 +2633,6 @@ export default function App() {
            <img src={viewingImage} alt="Chords" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
         </div>
       )}
-
     </div>
   );
 }
