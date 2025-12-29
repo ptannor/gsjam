@@ -6,6 +6,7 @@ export const ALL_USERS: UserName[] = [
   "Roi", "Yael", "Ortal", "Gali", "Dudi",
   "Fried", "Michelle", "Nadesh", "Adi", "Inbar",
   "Kobi", "Moria", "Michal H", "Shalhevet", "Tomer",
+  "Josh",
   "Guest 1", "Guest 2", "Guest 3"
 ];
 

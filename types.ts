@@ -4,6 +4,7 @@ export type UserName =
   | "Roi" | "Yael" | "Ortal" | "Gali" | "Dudi" 
   | "Fried" | "Michelle" | "Nadesh" | "Adi" | "Inbar" 
   | "Kobi" | "Moria" | "Michal H" | "Shalhevet" | "Tomer" 
+  | "Josh"
   | "Guest 1" | "Guest 2" | "Guest 3";
 
 export interface User {
