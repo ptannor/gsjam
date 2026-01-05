@@ -28,11 +28,10 @@ import {
 } from 'lucide-react';
 
 import { ALL_USERS, RATING_OPTIONS, FIREBASE_CONFIG } from './constants';
-// Added missing ChordSourceType and PlayStatus imports to resolve undefined type errors in Queue and Song management logic.
 import { JamSession, JamParticipant, SongChoice, User, Rating, UserName, ChordSearchResult, RatingValue, SongCacheItem, ChordSourceType, PlayStatus } from './types';
 import { searchChords } from './services/geminiService';
 import { rebalanceQueue } from './components/QueueLogic';
-import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences, SessionSummary, ScoredSong, UserLanguagePreference } from './components/StatsLogic';
+import { calculateSongScore, getLeaderboard, calculateTasteSimilarity, getCrowdPleasers, getSessionSummary, getBiggestThieves, getUserRatingHistory, getUserLanguageStats, getLanguagePreferences, SessionSummary, ScoredSong, UserLanguagePreference, UserSimilarity } from './components/StatsLogic';
 import { initFirebase, isFirebaseReady, getDb, ref, set, onValue, update, get, child, remove } from './services/firebase';
 
 // --- Utility Functions ---
@@ -109,19 +108,27 @@ const Button = ({ onClick, children, variant = 'primary', className = '', disabl
 
 // --- Stats Sub-components ---
 
+const StatCard = ({ label, value, colorClass = "text-white", icon: Icon }: any) => (
+  <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl relative overflow-hidden group">
+    {Icon && <Icon className="absolute -right-2 -bottom-2 text-jam-700 opacity-20 group-hover:scale-110 transition-transform" size={48} />}
+    <div className="text-jam-400 text-[10px] uppercase font-bold mb-1 tracking-wider">{label}</div>
+    <div className={`text-2xl font-black ${colorClass}`}>{value}</div>
+  </div>
+);
+
 const LanguageBalanceCard = ({ languages }: { languages: SessionSummary['languages'] }) => (
     <div className="bg-gradient-to-br from-jam-800 to-jam-900 border border-jam-700 rounded-2xl p-4 md:p-5 relative overflow-hidden group">
         <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><Languages size={64} className="text-purple-500"/></div>
         <div className="text-jam-400 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Language Balance</div>
-        <div className="flex items-center gap-3 md:gap-4 mt-1">
+        <div className="flex items-center gap-4 mt-1">
             <div>
-                <div className="text-base md:text-lg font-bold text-white">{languages.hebrew}</div>
-                <div className="text-[9px] md:text-[10px] text-jam-500 uppercase">Hebrew</div>
+                <div className="text-lg font-bold text-white">{languages.hebrew}</div>
+                <div className="text-[9px] text-jam-500 uppercase">Hebrew</div>
             </div>
-            <div className="h-6 md:h-8 w-px bg-jam-700"></div>
+            <div className="h-8 w-px bg-jam-700"></div>
             <div>
-                <div className="text-base md:text-lg font-bold text-white">{languages.english}</div>
-                <div className="text-[9px] md:text-[10px] text-jam-500 uppercase">English</div>
+                <div className="text-lg font-bold text-white">{languages.english}</div>
+                <div className="text-[9px] text-jam-500 uppercase">Global</div>
             </div>
         </div>
         <div className="w-full bg-jam-900 h-1.5 rounded-full mt-3 overflow-hidden flex">
@@ -131,31 +138,66 @@ const LanguageBalanceCard = ({ languages }: { languages: SessionSummary['languag
     </div>
 );
 
-const LanguageLoversSection = ({ preferences, titleSuffix = "" }: { preferences: { hebrewLovers: UserLanguagePreference[], englishLovers: UserLanguagePreference[] }, titleSuffix?: string }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="bg-gradient-to-br from-purple-900/30 to-jam-900 border border-purple-500/30 rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <h3 className="text-base md:text-lg font-bold text-purple-200 mb-4 flex items-center gap-2 relative z-10">🇮🇱 Hebrew Lovers</h3>
-            <div className="space-y-3 relative z-10">
-                {preferences.hebrewLovers.length > 0 ? preferences.hebrewLovers.map(user => (
-                    <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-purple-500/20">
-                        <div className="font-bold text-white truncate">{user.userName}</div>
-                        <div className="text-[10px] text-purple-300 mt-1">{(user.hebrewRatio * 100).toFixed(0)}% Hebrew Selections</div>
+const LanguageLoversSection = ({ preferences }: { preferences: { hebrewLovers: UserLanguagePreference[], englishLovers: UserLanguagePreference[] } }) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-purple-900/10 border border-purple-500/20 rounded-2xl p-4">
+            <h3 className="text-sm font-bold text-purple-300 mb-4 flex items-center gap-2"><Languages size={16}/> Hebrew Lovers</h3>
+            <div className="space-y-2">
+                {preferences.hebrewLovers.map(user => (
+                    <div key={user.userId} className="flex justify-between items-center bg-jam-900/50 p-2 rounded-lg border border-purple-500/10">
+                        <div className="font-bold text-xs">{user.userName}</div>
+                        <div className="text-[10px] font-mono text-purple-400">{(user.hebrewRatio * 100).toFixed(0)}%</div>
                     </div>
-                )) : <div className="text-xs text-jam-500 italic">No one in this group yet.</div>}
+                ))}
             </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-900/30 to-jam-900 border border-blue-500/30 rounded-2xl p-4 md:p-5 relative overflow-hidden">
-            <h3 className="text-base md:text-lg font-bold text-blue-200 mb-4 flex items-center gap-2 relative z-10">🌎 Global Lovers</h3>
-            <div className="space-y-3 relative z-10">
-                {preferences.englishLovers.length > 0 ? preferences.englishLovers.map(user => (
-                    <div key={user.userId} className="bg-jam-900/80 p-3 rounded-xl border border-blue-500/20">
-                        <div className="font-bold text-white truncate">{user.userName}</div>
-                        <div className="text-[10px] text-blue-300 mt-1">{((1 - user.hebrewRatio) * 100).toFixed(0)}% Global Selections</div>
+        <div className="bg-blue-900/10 border border-blue-500/20 rounded-2xl p-4">
+            <h3 className="text-sm font-bold text-blue-300 mb-4 flex items-center gap-2"><Globe size={16}/> Global Lovers</h3>
+            <div className="space-y-2">
+                {preferences.englishLovers.map(user => (
+                    <div key={user.userId} className="flex justify-between items-center bg-jam-900/50 p-2 rounded-lg border border-blue-500/10">
+                        <div className="font-bold text-xs">{user.userName}</div>
+                        <div className="text-[10px] font-mono text-blue-400">{((1 - user.hebrewRatio) * 100).toFixed(0)}%</div>
                     </div>
-                )) : <div className="text-xs text-jam-500 italic">No one in this group yet.</div>}
+                ))}
             </div>
         </div>
     </div>
+);
+
+const SimilarityGrid = ({ soulmates, opposites }: { soulmates: UserSimilarity[], opposites: UserSimilarity[] }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="bg-orange-950/20 border border-orange-500/20 rounded-2xl p-4">
+      <h3 className="text-sm font-bold text-orange-400 mb-4 flex items-center gap-2"><Heart size={16}/> Music Soulmates</h3>
+      <div className="space-y-3">
+        {soulmates.slice(0, 3).map((pair, idx) => (
+          <div key={idx} className="bg-jam-900/50 p-3 rounded-xl flex items-center justify-between border border-orange-500/10">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">{pair.userA}</span>
+              <span className="text-jam-600 text-[10px]">&</span>
+              <span className="text-xs font-bold text-white">{pair.userB}</span>
+            </div>
+            <div className="text-orange-400 font-black text-sm">{pair.score}%</div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div className="bg-jam-800/30 border border-jam-700 rounded-2xl p-4">
+      <h3 className="text-sm font-bold text-jam-400 mb-4 flex items-center gap-2"><Flame size={16}/> Taste Rivals</h3>
+      <div className="space-y-3">
+        {opposites.slice(0, 3).map((pair, idx) => (
+          <div key={idx} className="bg-jam-900/50 p-3 rounded-xl flex items-center justify-between border border-jam-700/50">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">{pair.userA}</span>
+              <span className="text-jam-600 text-[10px]">&</span>
+              <span className="text-xs font-bold text-white">{pair.userB}</span>
+            </div>
+            <div className="text-jam-500 font-black text-sm">{pair.score}%</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 );
 
 // --- Song Item Component ---
@@ -427,69 +469,169 @@ export default function App() {
 
   const activeDataset = useMemo(() => (statsTab === 'history' && archives[historyDate]) ? archives[historyDate] : { participants, songs, ratings }, [statsTab, historyDate, archives, participants, songs, ratings]);
   const summary = useMemo(() => getSessionSummary(activeDataset.songs || [], activeDataset.ratings || []), [activeDataset]);
+  const crowdPleasers = useMemo(() => getCrowdPleasers(activeDataset.songs || [], activeDataset.ratings || []), [activeDataset]);
+  const taste = useMemo(() => calculateTasteSimilarity(activeDataset.ratings || [], activeDataset.participants || []), [activeDataset]);
+  const langPrefs = useMemo(() => getLanguagePreferences(activeDataset.songs || [], activeDataset.ratings || []), [activeDataset]);
+  const userLangStats = useMemo(() => getUserLanguageStats(activeDataset.songs || []), [activeDataset]);
+  
+  const timeline = useMemo(() => {
+    const events = [
+        ...(activeDataset.participants || []).map(p => ({ type: 'arrival', time: p.arrivalTime, name: p.name })),
+        ...(activeDataset.songs || []).filter(s => s.playStatus === 'played').map(s => ({ type: 'song', time: s.playedAt || 0, title: s.title, owner: s.ownerName }))
+    ].sort((a,b) => a.time - b.time);
+    return events;
+  }, [activeDataset]);
+
+  const renderStatsDashboard = () => (
+    <div className="space-y-8 animate-fade-in overflow-x-hidden">
+        {/* Metric Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard label="Played" value={summary.totalSongs} icon={Music} />
+            <StatCard label="Duration" value={`${summary.totalDurationMin}m`} icon={Clock} />
+            <StatCard label="Vibe" value={`${summary.vibeScore}%`} colorClass="text-orange-400" icon={Activity} />
+            <LanguageBalanceCard languages={summary.languages} />
+        </div>
+
+        {/* Timeline Visualizer */}
+        <div className="bg-jam-800/30 border border-jam-700 rounded-2xl p-6">
+            <h3 className="text-sm font-bold text-jam-400 uppercase mb-6 flex items-center gap-2 tracking-widest"><Activity size={16}/> Session Timeline</h3>
+            <div className="relative border-l-2 border-jam-700 ml-3 space-y-6 pb-2">
+                {timeline.map((ev, idx) => (
+                    <div key={idx} className="relative pl-6">
+                        <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full ${ev.type === 'arrival' ? 'bg-blue-500' : 'bg-green-500'} ring-4 ring-jam-950`}></div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-mono text-jam-500">{new Date(ev.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            <div className={`text-xs p-3 rounded-xl border ${ev.type === 'arrival' ? 'text-blue-200 border-blue-500/20 bg-blue-500/5' : 'text-white border-jam-700 bg-jam-800/50'}`}>
+                                {ev.type === 'arrival' ? <span><strong>{ev.name}</strong> joined the jam</span> : <span><strong>{ev.owner}</strong> played <strong>{ev.title}</strong></span>}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                {timeline.length === 0 && <div className="text-xs text-jam-600 italic pl-6">Waiting for the first riff...</div>}
+            </div>
+        </div>
+
+        {/* Crowd Pleasers */}
+        <div className="bg-jam-800/30 border border-jam-700 rounded-2xl p-6">
+            <h3 className="text-sm font-bold text-jam-400 uppercase mb-6 flex items-center gap-2 tracking-widest"><Trophy size={16} className="text-yellow-500"/> Crowd Pleasers</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {crowdPleasers.slice(0, 6).map((cp, idx) => (
+                    <div key={idx} className="bg-jam-900/50 p-4 rounded-2xl border border-jam-700 flex items-center justify-between group hover:border-orange-500/50 transition-colors">
+                        <div>
+                            <div className="text-xs font-bold text-white mb-1">{participants.find(p => p.userId === cp.userId)?.name || cp.userId}</div>
+                            <div className="text-[10px] text-jam-500">{cp.songCount} songs played</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-lg font-black text-orange-400">{cp.avgScore}%</div>
+                            <div className="text-[8px] text-jam-600 uppercase font-black">Avg Rating</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+  );
+
+  const renderLeaderboards = () => (
+    <div className="space-y-8 animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-jam-800/50 border border-jam-700 p-6 rounded-2xl">
+                <h3 className="text-sm font-bold text-orange-400 uppercase mb-4 flex items-center gap-2"><Star size={16}/> Top Rated Tracks</h3>
+                <div className="space-y-3">
+                    {getLeaderboard(activeDataset.songs || [], activeDataset.ratings || []).slice(0, 10).map((s, i) => (
+                        <div key={s.song.id} className="flex items-center justify-between p-3 bg-jam-900/50 rounded-xl border border-jam-700 hover:border-jam-600">
+                            <div className="truncate pr-4">
+                                <span className="text-jam-500 font-mono mr-3 text-xs">{(i+1).toString().padStart(2, '0')}</span>
+                                <span className="font-bold text-sm text-white">{s.song.title}</span>
+                                <div className="text-[10px] text-jam-500 ml-8">{s.song.ownerName}</div>
+                            </div>
+                            <div className="text-sm font-black text-orange-400">{s.score}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div className="bg-jam-800/50 border border-jam-700 p-6 rounded-2xl">
+                <h3 className="text-sm font-bold text-red-400 uppercase mb-4 flex items-center gap-2"><Flame size={16}/> Biggest Thieves</h3>
+                <div className="space-y-3">
+                    {getBiggestThieves(activeDataset.songs || []).slice(0, 10).map((t, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-jam-900/50 rounded-xl border border-red-500/10 hover:border-red-500/20">
+                            <div className="font-bold text-jam-100 text-sm">{t.name}</div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-jam-500">Stole</span>
+                                <span className="text-sm font-black text-red-400">{t.count}</span>
+                                <span className="text-[10px] text-jam-500">spots</span>
+                            </div>
+                        </div>
+                    ))}
+                    {getBiggestThieves(activeDataset.songs || []).length === 0 && <div className="text-xs text-jam-600 italic text-center py-10">Pure session. No one has stolen a spot.</div>}
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+
+  const renderTasteAnalysis = () => (
+    <div className="space-y-8 animate-fade-in">
+        <SimilarityGrid soulmates={taste.soulmates} opposites={taste.opposites} />
+        <LanguageLoversSection preferences={langPrefs} />
+        
+        {/* Language Table */}
+        <div className="bg-jam-800/30 border border-jam-700 rounded-2xl p-6 overflow-hidden">
+            <h3 className="text-sm font-bold text-jam-400 uppercase mb-6 flex items-center gap-2 tracking-widest"><Languages size={16}/> User Language Stats</h3>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                    <thead>
+                        <tr className="text-jam-500 border-b border-jam-700">
+                            <th className="pb-3 font-bold uppercase tracking-wider">Musician</th>
+                            <th className="pb-3 font-bold uppercase tracking-wider">Total</th>
+                            <th className="pb-3 font-bold uppercase tracking-wider">🇮🇱 Hebrew</th>
+                            <th className="pb-3 font-bold uppercase tracking-wider">🌎 Global</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-jam-800">
+                        {userLangStats.map((stat, i) => (
+                            <tr key={i} className="hover:bg-jam-800/50">
+                                <td className="py-3 font-bold text-white">{stat.name}</td>
+                                <td className="py-3">{stat.total}</td>
+                                <td className="py-3 text-purple-400">{stat.hebrew} <span className="text-[10px] opacity-50">({stat.hebrewPct}%)</span></td>
+                                <td className="py-3 text-blue-400">{stat.english} <span className="text-[10px] opacity-50">({stat.englishPct}%)</span></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+  );
 
   const renderStatsTabs = () => (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
             {['today', 'history', 'leaderboards', 'taste'].map(tab => (
-                <button key={tab} onClick={() => setStatsTab(tab as any)} className={`px-4 py-2 rounded-full text-xs font-bold border whitespace-nowrap transition-all ${statsTab === tab ? 'bg-orange-600 border-orange-500 text-white' : 'bg-jam-800 border-jam-700 text-jam-400'}`}>
+                <button key={tab} onClick={() => setStatsTab(tab as any)} className={`px-5 py-2.5 rounded-full text-xs font-bold border whitespace-nowrap transition-all ${statsTab === tab ? 'bg-orange-600 border-orange-500 text-white shadow-lg shadow-orange-900/20' : 'bg-jam-800 border-jam-700 text-jam-400 hover:text-white'}`}>
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
             ))}
         </div>
 
-        {statsTab === 'today' && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl text-center">
-                    <div className="text-jam-400 text-[10px] uppercase font-bold mb-1">Total Played</div>
-                    <div className="text-2xl font-black">{summary.totalSongs}</div>
-                </div>
-                <div className="bg-jam-800/50 border border-jam-700 p-4 rounded-2xl text-center">
-                    <div className="text-jam-400 text-[10px] uppercase font-bold mb-1">Vibe Score</div>
-                    <div className="text-2xl font-black text-orange-400">{summary.vibeScore}</div>
-                </div>
-                <div className="col-span-2"><LanguageBalanceCard languages={summary.languages} /></div>
-            </div>
-        )}
-
+        {statsTab === 'today' && renderStatsDashboard()}
+        
         {statsTab === 'history' && (
-            <div className="space-y-4">
-                <select value={historyDate} onChange={(e) => setHistoryDate(e.target.value)} className="w-full bg-jam-900 border border-jam-600 p-4 rounded-xl outline-none">
-                    <option value="">-- Select Past Session --</option>
-                    {Object.keys(archives).sort().reverse().map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-                {historyDate && <div className="p-4 bg-jam-800 border border-jam-700 rounded-2xl">Archived Summary: {archives[historyDate].songs?.length || 0} songs.</div>}
+            <div className="space-y-6">
+                <div className="relative group">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-jam-500 group-hover:text-orange-500 transition-colors" size={18}/>
+                    <select value={historyDate} onChange={(e) => setHistoryDate(e.target.value)} className="w-full bg-jam-900 border border-jam-700 p-4 pl-12 rounded-2xl outline-none focus:border-orange-500 appearance-none text-sm font-bold">
+                        <option value="">-- Choose Past Session --</option>
+                        {Object.keys(archives).sort().reverse().map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-jam-500 pointer-events-none" size={18}/>
+                </div>
+                {historyDate ? renderStatsDashboard() : <div className="text-center py-20 bg-jam-900/20 border border-dashed border-jam-800 rounded-3xl text-jam-500 italic">Select a date above to browse the archives.</div>}
             </div>
         )}
 
-        {statsTab === 'leaderboards' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-jam-800/50 border border-jam-700 p-5 rounded-2xl">
-                    <h3 className="text-sm font-bold text-orange-400 uppercase mb-4 flex items-center gap-2"><Trophy size={16}/> Top Rated Songs</h3>
-                    <div className="space-y-3">
-                        {getLeaderboard(activeDataset.songs || [], activeDataset.ratings || []).slice(0, 5).map((s, i) => (
-                            <div key={s.song.id} className="flex items-center justify-between p-2 bg-jam-900/50 rounded-lg">
-                                <div className="truncate pr-4"><span className="text-jam-500 font-mono mr-2">{i+1}.</span><span className="font-bold">{s.song.title}</span></div>
-                                <div className="text-sm font-black text-orange-400">{s.score}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className="bg-jam-800/50 border border-jam-700 p-5 rounded-2xl">
-                    <h3 className="text-sm font-bold text-red-400 uppercase mb-4 flex items-center gap-2"><Flame size={16}/> Biggest Thieves</h3>
-                    <div className="space-y-3">
-                        {getBiggestThieves(activeDataset.songs || []).slice(0, 5).map((t, i) => (
-                            <div key={i} className="flex items-center justify-between p-2 bg-jam-900/50 rounded-lg">
-                                <div className="font-bold text-jam-200">{t.name}</div>
-                                <div className="text-xs bg-red-500/10 text-red-300 px-2 py-1 rounded font-black">{t.count} steals</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {statsTab === 'taste' && <LanguageLoversSection preferences={getLanguagePreferences(activeDataset.songs || [], activeDataset.ratings || [])} />}
+        {statsTab === 'leaderboards' && renderLeaderboards()}
+        {statsTab === 'taste' && renderTasteAnalysis()}
     </div>
   );
 
@@ -497,8 +639,11 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-jam-950 p-6">
         <div className="bg-jam-800 p-8 rounded-2xl border border-jam-700 shadow-2xl w-full max-w-md animate-fade-in text-center">
-          <Guitar size={48} className="text-orange-500 mx-auto mb-4" />
-          <h1 className="text-3xl font-black mb-6">GS JAM</h1>
+          <div className="bg-orange-500/10 p-5 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center border border-orange-500/20">
+             <Guitar size={48} className="text-orange-500" />
+          </div>
+          <h1 className="text-3xl font-black mb-2 tracking-tight">GS JAM</h1>
+          <p className="text-jam-400 text-sm mb-8">Musician Session Manager</p>
           <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-jam-600">
             {ALL_USERS.map(u => (
               <button key={u} onClick={() => handleJoin(u)} className="bg-jam-700/50 hover:bg-orange-600 p-3 rounded-xl text-xs font-bold transition-all text-jam-200 hover:text-white border border-transparent hover:border-orange-500/50 truncate">
@@ -513,39 +658,39 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-jam-950 text-jam-100 flex overflow-x-hidden">
-      {/* Navigation Desktop */}
+      {/* Sidebar Desktop */}
       <aside className="w-64 bg-jam-900 border-r border-jam-800 hidden md:flex flex-col fixed h-full z-20">
-        <div className="p-6 border-b border-jam-800"><h1 className="text-2xl font-black text-white">GS <span className="text-orange-500">JAM</span></h1></div>
-        <nav className="p-4 space-y-1">
-          <button onClick={() => setView('jam')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${view === 'jam' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><Music size={18}/> Queue</button>
-          <button onClick={() => setView('stats')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${view === 'stats' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><BarChart2 size={18}/> Stats</button>
-          <button onClick={() => setView('personal_stash')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${view === 'personal_stash' ? 'bg-orange-600 text-white shadow-lg' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><Bookmark size={18}/> Stash</button>
+        <div className="p-8 border-b border-jam-800"><h1 className="text-2xl font-black text-white tracking-tighter italic">GS <span className="text-orange-500">JAM</span></h1></div>
+        <nav className="p-4 space-y-2 mt-4">
+          <button onClick={() => setView('jam')} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all ${view === 'jam' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/30' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><Music size={20}/> Jam Queue</button>
+          <button onClick={() => setView('stats')} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all ${view === 'stats' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/30' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><BarChart2 size={20}/> Insights</button>
+          <button onClick={() => setView('personal_stash')} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-sm font-bold transition-all ${view === 'personal_stash' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/30' : 'text-jam-400 hover:text-white hover:bg-jam-800'}`}><Bookmark size={20}/> Personal Stash</button>
         </nav>
-        <div className="mt-auto p-4 border-t border-jam-800 bg-jam-900/50">
-           <div className="flex items-center justify-between mb-1"><span className="text-[10px] text-jam-500 uppercase font-black">Member</span><button onClick={() => setCurrentUser(null)} className="p-1 hover:text-red-400 transition-colors"><LogOut size={14}/></button></div>
-           <div className="font-bold text-white truncate">{currentUser.name}</div>
+        <div className="mt-auto p-4 border-t border-jam-800 bg-jam-950/50">
+           <div className="flex items-center justify-between mb-2"><span className="text-[9px] text-jam-500 uppercase font-black tracking-widest">Active Member</span><button onClick={() => setCurrentUser(null)} className="p-1.5 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors"><LogOut size={16}/></button></div>
+           <div className="font-bold text-white truncate px-1">{currentUser.name}</div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-3 md:p-8 w-full overflow-x-hidden pb-32">
-        {/* Mobile Nav */}
-        <div className="md:hidden flex items-center justify-between mb-6 bg-jam-800/80 p-4 rounded-2xl border border-jam-700 backdrop-blur-sm sticky top-4 z-30">
-             <h1 className="text-xl font-black">GS <span className="text-orange-500">JAM</span></h1>
-             <button onClick={() => setShowMobileMenu(true)} className="p-2 bg-jam-700 rounded-lg"><MenuIcon size={20}/></button>
+      {/* Main Container */}
+      <main className="flex-1 md:ml-64 p-4 md:p-10 w-full overflow-x-hidden pb-40">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between mb-8 bg-jam-800/80 p-4 rounded-2xl border border-jam-700 backdrop-blur-md sticky top-4 z-30 shadow-2xl">
+             <h1 className="text-xl font-black italic tracking-tighter">GS <span className="text-orange-500">JAM</span></h1>
+             <button onClick={() => setShowMobileMenu(true)} className="p-2.5 bg-jam-700 rounded-xl text-white active:scale-95 transition-transform"><MenuIcon size={24}/></button>
         </div>
 
         {view === 'jam' && (
            <div className="max-w-2xl mx-auto px-1 animate-fade-in">
-             <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black text-white">Queue</h2>
-                <Button onClick={() => { setEditingSongId(null); setNewSong({title:'', artist:'', ownerId: currentUser.id, chordType:'auto_search', link:'', screenshot:'', searchTerm:''}); setShowAddSong(true); }} className="text-[10px] py-2 px-4 shadow-orange-900/20"><Plus size={16}/> Add Song</Button>
+             <div className="flex items-center justify-between mb-10">
+                <h2 className="text-3xl font-black text-white tracking-tight">Queue</h2>
+                <Button onClick={() => { setEditingSongId(null); setNewSong({title:'', artist:'', ownerId: currentUser.id, chordType:'auto_search', link:'', screenshot:'', searchTerm:''}); setShowAddSong(true); }} className="px-6 py-3"><Plus size={18}/> New Request</Button>
              </div>
 
              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                <SortableContext items={queueIds} strategy={verticalListSortingStrategy}>
-                 <div className="space-y-3">
-                   {queueIds.length === 0 && <div className="text-center py-20 bg-jam-900/30 border border-dashed border-jam-700 rounded-3xl text-jam-500 italic">Queue is empty. Join the fun!</div>}
+                 <div className="space-y-4">
+                   {queueIds.length === 0 && <div className="text-center py-24 bg-jam-900/20 border border-dashed border-jam-700 rounded-[32px] text-jam-500 italic font-medium">The stage is waiting. Add your first song to start!</div>}
                    {queueIds.map((id, index) => {
                      const song = songs.find(s => s.id === id);
                      if (!song) return null;
@@ -571,9 +716,9 @@ export default function App() {
              </DndContext>
 
              {songs.some(s => s.playStatus === 'played') && (
-                 <div className="mt-16 pt-8 border-t border-jam-800">
-                    <h3 className="text-lg font-black mb-6 flex items-center gap-2"><History size={18} className="text-jam-500"/> Played</h3>
-                    <div className="space-y-3 opacity-90">
+                 <div className="mt-20 pt-10 border-t border-jam-800">
+                    <h3 className="text-xl font-black mb-6 flex items-center gap-3"><History size={24} className="text-jam-600"/> Recorded History</h3>
+                    <div className="space-y-4 opacity-90">
                         {songs.filter(s => s.playStatus === 'played').sort((a,b) => (b.playedAt||0) - (a.playedAt||0)).map(song => (
                              <SortableSongItem key={song.id} song={song} index={0} isCurrent={false} onRevive={() => {
                                  const updated = songs.map(s => s.id === song.id ? { ...s, playStatus: 'not_played' as PlayStatus } : s);
@@ -592,19 +737,19 @@ export default function App() {
 
         {view === 'personal_stash' && (
            <div className="max-w-2xl mx-auto px-1 animate-fade-in">
-               <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-black mb-6 flex items-center gap-3">My Stash <Bookmark size={24} className="text-orange-500"/></h2>
+               <div className="flex items-center justify-between mb-10">
+                    <h2 className="text-3xl font-black flex items-center gap-4 text-white">My Library <Bookmark size={32} className="text-orange-500"/></h2>
                </div>
-               <div className="space-y-3">
-                   {myStash.length === 0 ? <div className="text-center py-20 text-jam-500 italic bg-jam-900/20 rounded-3xl border border-dashed border-jam-800">No songs stashed yet. Save some from the queue!</div> : myStash.map(item => (
-                       <div key={item.id} className="p-4 bg-jam-800 border border-jam-700 rounded-xl flex items-center justify-between group">
+               <div className="space-y-4">
+                   {myStash.length === 0 ? <div className="text-center py-24 text-jam-500 font-medium bg-jam-900/20 rounded-[32px] border border-dashed border-jam-800">Your stash is empty. Save songs from the queue to keep them here!</div> : myStash.map(item => (
+                       <div key={item.id} className="p-5 bg-jam-800 border border-jam-700 rounded-2xl flex items-center justify-between group hover:border-jam-600 transition-all shadow-lg hover:shadow-orange-900/5">
                            <div className="min-w-0 flex-1">
-                               <div className="font-bold text-white truncate">{item.title}</div>
-                               <div className="text-xs text-jam-500 truncate">{item.artist}</div>
+                               <div className="font-bold text-white truncate text-lg">{item.title}</div>
+                               <div className="text-sm text-jam-500 truncate">{item.artist}</div>
                            </div>
                            <div className="flex items-center gap-2">
-                               <button onClick={() => handleSaveSong(item)} className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-full" title="Add to session queue"><Plus size={18}/></button>
-                               <button onClick={() => removeFromStash(item.id)} className="p-2 text-jam-600 hover:text-red-400 rounded-full"><Trash2 size={16}/></button>
+                               <button onClick={() => handleSaveSong(item)} className="p-3 bg-orange-600/10 text-orange-400 hover:bg-orange-600 hover:text-white rounded-xl transition-all" title="Add to session"><Plus size={20}/></button>
+                               <button onClick={() => removeFromStash(item.id)} className="p-3 text-jam-600 hover:text-red-400 rounded-xl transition-colors"><Trash2 size={18}/></button>
                            </div>
                        </div>
                    ))}
@@ -614,25 +759,32 @@ export default function App() {
       </main>
 
       {/* Modals */}
-      <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? "Edit Song" : "Add New Song"}>
-          <div className="space-y-4">
-              <input className="w-full bg-jam-900 border border-jam-700 p-4 rounded-xl text-white outline-none focus:border-orange-500 transition-colors" placeholder="Song Title" value={newSong.title} onChange={e => setNewSong({...newSong, title: e.target.value})} />
-              <input className="w-full bg-jam-900 border border-jam-700 p-4 rounded-xl text-white outline-none focus:border-orange-500 transition-colors" placeholder="Artist" value={newSong.artist} onChange={e => setNewSong({...newSong, artist: e.target.value})} />
-              <div className="grid grid-cols-2 gap-2">
+      <Modal isOpen={showAddSong} onClose={() => setShowAddSong(false)} title={editingSongId ? "Edit Song" : "Add Song to Session"}>
+          <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-jam-500 ml-1">Track Name</label>
+                <input className="w-full bg-jam-900 border border-jam-700 p-4 rounded-xl text-white outline-none focus:border-orange-500 transition-colors font-medium" placeholder="e.g. Hotel California" value={newSong.title} onChange={e => setNewSong({...newSong, title: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-jam-500 ml-1">Artist</label>
+                <input className="w-full bg-jam-900 border border-jam-700 p-4 rounded-xl text-white outline-none focus:border-orange-500 transition-colors font-medium" placeholder="e.g. Eagles" value={newSong.artist} onChange={e => setNewSong({...newSong, artist: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
                   <Button variant="secondary" onClick={async () => {
                       setIsSearching(true);
                       const res = await searchChords(newSong.title, newSong.artist);
                       if (res.success) setSearchResults(res.data);
                       setIsSearching(false);
-                  }} disabled={isSearching} className="text-[10px]">{isSearching ? <RefreshCw className="animate-spin" size={14}/> : <Search size={14}/>} Chords</Button>
-                  <Button onClick={() => handleSaveSong()} className="text-[10px]">{editingSongId ? "Update" : "Add Song"}</Button>
+                  }} disabled={isSearching} className="h-12">{isSearching ? <RefreshCw className="animate-spin" size={16}/> : <Search size={16}/>} Lookup</Button>
+                  <Button onClick={() => handleSaveSong()} className="h-12">{editingSongId ? "Update" : "Add to Queue"}</Button>
               </div>
               {searchResults.length > 0 && (
-                  <div className="mt-4 p-2 bg-jam-900 rounded-xl max-h-48 overflow-y-auto scrollbar-thin">
+                  <div className="mt-4 p-3 bg-jam-900/50 rounded-2xl max-h-56 overflow-y-auto scrollbar-thin border border-jam-700">
+                      <div className="text-[10px] uppercase font-black text-jam-600 mb-3 ml-1">Select Source</div>
                       {searchResults.map((r, i) => (
-                          <div key={i} onClick={() => setNewSong({...newSong, link: r.url})} className={`p-3 rounded-lg cursor-pointer border text-xs mb-2 ${newSong.link === r.url ? 'border-orange-500 bg-orange-500/10' : 'border-jam-700'}`}>
-                              <div className="font-bold truncate text-jam-100">{r.title}</div>
-                              <div className="text-[10px] text-jam-500 truncate">{r.url}</div>
+                          <div key={i} onClick={() => setNewSong({...newSong, link: r.url})} className={`p-4 rounded-xl cursor-pointer border text-xs mb-2 transition-all ${newSong.link === r.url ? 'border-orange-500 bg-orange-600/10 shadow-lg' : 'border-jam-700 hover:bg-jam-800'}`}>
+                              <div className="font-bold truncate text-jam-100 text-sm mb-1">{r.title}</div>
+                              <div className="text-[10px] text-orange-500/80 truncate font-mono">{r.url}</div>
                           </div>
                       ))}
                   </div>
@@ -640,34 +792,34 @@ export default function App() {
           </div>
       </Modal>
 
-      <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Rate the Performance">
-          <div className="text-center">
-              <div className="mb-6">
-                  <div className="font-black text-2xl mb-1">{showRatingModal?.title}</div>
-                  <div className="text-orange-500 font-bold uppercase text-xs tracking-widest">{showRatingModal?.ownerName}</div>
+      <Modal isOpen={!!showRatingModal} onClose={() => setShowRatingModal(null)} title="Crowd Feedback">
+          <div className="text-center px-2">
+              <div className="mb-10">
+                  <div className="font-black text-3xl mb-2 tracking-tight">{showRatingModal?.title}</div>
+                  <div className="text-orange-500 font-black uppercase text-xs tracking-[0.2em]">{showRatingModal?.ownerName}</div>
               </div>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-4">
                   {RATING_OPTIONS.map(opt => (
                       <button key={opt.value} onClick={() => {
                           const rating: Rating = { id: generateId(), songChoiceId: showRatingModal!.id, userId: currentUser.id, value: opt.value };
                           const updated = [...ratings, rating];
                           setRatings(updated); updateData('ratings', updated); setShowRatingModal(null);
-                      }} className="p-5 bg-jam-900 border border-jam-700 rounded-2xl hover:bg-jam-700 hover:border-jam-500 transition-all font-black text-lg flex items-center justify-center gap-3">
-                          {opt.label}
+                      }} className="p-6 bg-jam-900 border border-jam-700 rounded-[24px] hover:bg-jam-700 hover:border-orange-500 transition-all font-black text-xl flex items-center justify-center gap-4 group">
+                          <span className="group-hover:scale-110 transition-transform">{opt.label}</span>
                       </button>
                   ))}
               </div>
           </div>
       </Modal>
 
-      {/* Mobile Drawer */}
-      <Modal isOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} title="GS JAM MENU">
-          <div className="space-y-3">
-              <button onClick={() => { setView('jam'); setShowMobileMenu(false); }} className="w-full p-5 bg-jam-900 border border-jam-700 rounded-2xl font-black flex items-center gap-4 active:bg-orange-600 active:text-white transition-all"><Music/> QUEUE</button>
-              <button onClick={() => { setView('stats'); setShowMobileMenu(false); }} className="w-full p-5 bg-jam-900 border border-jam-700 rounded-2xl font-black flex items-center gap-4 active:bg-orange-600 active:text-white transition-all"><BarChart2/> STATS</button>
-              <button onClick={() => { setView('personal_stash'); setShowMobileMenu(false); }} className="w-full p-5 bg-jam-900 border border-jam-700 rounded-2xl font-black flex items-center gap-4 active:bg-orange-600 active:text-white transition-all"><Bookmark/> STASH</button>
-              <div className="h-px bg-jam-700 my-6"></div>
-              <button onClick={() => { setCurrentUser(null); setShowMobileMenu(false); }} className="w-full p-5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl font-black flex items-center gap-4"><LogOut/> LOG OUT</button>
+      {/* Mobile Nav Drawer */}
+      <Modal isOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} title="GS JAM NAVIGATION">
+          <div className="space-y-4">
+              <button onClick={() => { setView('jam'); setShowMobileMenu(false); }} className="w-full p-6 bg-jam-900 border border-jam-700 rounded-3xl font-black text-lg flex items-center gap-5 active:bg-orange-600 active:text-white transition-all shadow-xl"><Music size={24}/> SESSION QUEUE</button>
+              <button onClick={() => { setView('stats'); setShowMobileMenu(false); }} className="w-full p-6 bg-jam-900 border border-jam-700 rounded-3xl font-black text-lg flex items-center gap-5 active:bg-orange-600 active:text-white transition-all shadow-xl"><BarChart2 size={24}/> SESSION INSIGHTS</button>
+              <button onClick={() => { setView('personal_stash'); setShowMobileMenu(false); }} className="w-full p-6 bg-jam-900 border border-jam-700 rounded-3xl font-black text-lg flex items-center gap-5 active:bg-orange-600 active:text-white transition-all shadow-xl"><Bookmark size={24}/> PERSONAL LIBRARY</button>
+              <div className="h-px bg-jam-700 my-8"></div>
+              <button onClick={() => { setCurrentUser(null); setShowMobileMenu(false); }} className="w-full p-6 bg-red-500/10 text-red-400 border border-red-500/20 rounded-3xl font-black text-lg flex items-center gap-5"><LogOut size={24}/> LOG OUT</button>
           </div>
       </Modal>
     </div>
